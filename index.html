@@ -87,6 +87,7 @@ h1{font-size:20px;margin:0}
 .roomtbl input:focus{outline:none;background:#eff6ff}
 .roomtbl .rm{color:var(--c-fail);cursor:pointer;font-weight:700}
 .hint{font-size:12px;color:var(--c-sub);margin-top:6px}
+@keyframes yfspin{to{transform:rotate(360deg)}}
 /* ============ 移动端适配 ============ */
 @media (max-width: 720px){
   body{font-size:15px}
@@ -989,7 +990,8 @@ function openReport(){
   bar.id = 'printBar';
   bar.className = 'no-print';
   bar.style.cssText = 'position:fixed;top:12px;right:12px;z-index:99;display:flex;gap:8px';
-  bar.innerHTML = '<button class="btn btn-primary" onclick="doPrint()">🖨 打印 / 另存为PDF</button>' +
+  const mobile = isMobileUA();
+  bar.innerHTML = '<button class="btn btn-primary" onclick="'+(mobile?'exportPdf()':'doPrint()')+'">'+(mobile?'📄 下载PDF文件':'🖨 打印 / 另存为PDF')+'</button>' +
                   '<button class="btn btn-ghost" onclick="closeReport()">← 返回编辑</button>';
   document.body.appendChild(bar);
 }
@@ -1047,6 +1049,117 @@ function showPrintHelp(){
   btn.textContent = '知道了';
   btn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:10px 0;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700;font-size:15px;cursor:pointer';
   btn.addEventListener('click', ()=>d.remove());
+  box.appendChild(btn);
+  d.appendChild(box);
+  document.body.appendChild(d);
+}
+
+/* —— 移动端：直接生成PDF文件下载（兼容微信、QQ等不支持打印的内置浏览器） —— */
+function isMobileUA(){
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+function loadScript(src){
+  return new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = ()=>res();
+    s.onerror = ()=>rej(new Error('PDF组件加载失败，请检查网络后重试'));
+    document.head.appendChild(s);
+  });
+}
+function pdfFileName(){
+  const p = [state.info.community, state.info.building, state.info.room].filter(Boolean);
+  return (p.length ? p.join(' ') : '验房') + '-验房报告.pdf';
+}
+function showPdfMask(msg){
+  hidePdfMask();
+  const d = document.createElement('div');
+  d.id = 'pdfMask';
+  d.className = 'no-print';
+  d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px';
+  d.innerHTML = '<div style="background:#fff;border-radius:12px;padding:26px 24px;text-align:center;min-width:240px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.3)">' +
+    '<div style="width:38px;height:38px;margin:0 auto 14px;border:4px solid #dbeafe;border-top-color:#1d4ed8;border-radius:50%;animation:yfspin .9s linear infinite"></div>' +
+    '<div id="pdfMaskMsg" style="font-size:14px;color:#333;font-weight:600;line-height:1.6"></div>' +
+    '<div style="font-size:12px;color:#999;margin-top:6px">请勿离开或切换应用</div></div>';
+  document.body.appendChild(d);
+  document.getElementById('pdfMaskMsg').textContent = msg;
+}
+function hidePdfMask(){
+  const d = document.getElementById('pdfMask');
+  if(d) d.remove();
+}
+async function exportPdf(){
+  if(!window.html2pdf){
+    showPdfMask('正在加载PDF组件…');
+    try{ await loadScript('lib/html2pdf.bundle.min.js'); }
+    catch(e){ hidePdfMask(); alert(e.message || 'PDF组件加载失败'); return; }
+  }
+  showPdfMask('正在生成PDF，请稍候…');
+  // 先让遮罩渲染一帧，避免页面繁忙时看不到提示
+  await new Promise(r=>setTimeout(r, 60));
+  try{
+    const el = document.querySelector('#report .rp');
+    if(!el) throw new Error('报告内容不存在，请先点击「生成报告」');
+    const blob = await html2pdf().set({
+      margin: [12, 10, 12, 10],   // mm：上、左右、下
+      filename: pdfFileName(),
+      image: {type:'jpeg', quality:0.92},
+      html2canvas: {scale:3, useCORS:true, backgroundColor:'#ffffff', logging:false},
+      jsPDF: {unit:'mm', format:'a4', orientation:'portrait'},
+      pagebreak: {mode:['css','legacy']}
+    }).from(el).toPdf().output('blob');
+    hidePdfMask();
+    // 尝试自动下载；部分内置浏览器会拦截，再给出手动保存入口
+    let autoSaved = false, url = null;
+    try{
+      url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdfFileName();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      autoSaved = true;
+      setTimeout(()=>URL.revokeObjectURL(url), 5*60*1000);
+    }catch(e){ autoSaved = false; }
+    showPdfDone(blob, autoSaved);
+  }catch(e){
+    hidePdfMask();
+    alert('PDF生成失败：' + (e && e.message ? e.message : e) + '。可改用电脑浏览器打开本页面打印。');
+  }
+}
+function showPdfDone(blob, autoSaved){
+  if(document.getElementById('pdfDone')) return;
+  let url = null;
+  try{ url = URL.createObjectURL(blob); }catch(e){}
+  const d = document.createElement('div');
+  d.id = 'pdfDone';
+  d.className = 'no-print';
+  d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:12px;max-width:420px;width:100%;padding:22px 18px;font-size:14px;line-height:1.7;color:#333;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center';
+  box.innerHTML = '<div style="font-size:42px">✅</div>' +
+    '<div style="font-weight:700;font-size:16px;margin:4px 0 6px">PDF 已生成</div>' +
+    '<div id="pdfDoneHint" style="color:#666;font-size:13px;margin-bottom:12px"></div>';
+  const hint = box.querySelector('#pdfDoneHint');
+  hint.textContent = autoSaved
+    ? '文件已开始下载；如未看到下载提示，请点击下方按钮保存。'
+    : '点击下方按钮保存PDF文件；微信内如无法保存，请点右上角「···」→「在浏览器打开」后重新生成。';
+  if(url){
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = pdfFileName();
+    a.textContent = '💾 保存 / 打开PDF';
+    a.style.cssText = 'display:block;width:100%;padding:11px 0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:10px';
+    box.appendChild(a);
+  }
+  const btn = document.createElement('button');
+  btn.textContent = '关闭';
+  btn.style.cssText = 'display:block;width:100%;padding:10px 0;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#333;font-weight:600;font-size:14px;cursor:pointer';
+  btn.addEventListener('click', ()=>{
+    d.remove();
+    if(url) setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  });
   box.appendChild(btn);
   d.appendChild(box);
   document.body.appendChild(d);

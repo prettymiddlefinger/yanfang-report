@@ -1,13 +1,14 @@
 /* 验房报告生成器 Service Worker
    策略：网络优先（保证更新即时生效），离线时回退到缓存 */
-const CACHE = 'yanfang-pwa-v1';
+const CACHE = 'yanfang-pwa-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './lib/html2pdf.bundle.min.js'
 ];
 
 self.addEventListener('install', e => {
