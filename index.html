@@ -692,7 +692,7 @@ function renderItem(i){
       '<div style="margin-top:8px"><label>问题描述 *</label><textarea data-k="desc" rows="2" placeholder="如：墙面局部空鼓约0.3㎡，位于主卧东墙距地1.2m处"></textarea></div>' +
       '<div style="margin-top:8px"><label>整改建议（可选）</label><input data-k="sugg" placeholder="如：凿除空鼓部位后重新抹灰"></div>' +
       '<div class="photos" data-photos></div>' +
-      '<div class="photos"><div class="add" data-addph>＋</div><input type="file" accept="image/*" multiple style="display:none" data-file></div>' +
+      '<div class="photos"><label class="add" for="phfile-'+esc(i.id)+'" title="添加现场照片">＋</label><input type="file" id="phfile-'+esc(i.id)+'" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" data-file></div>' +
       '<div class="hint">可添加现场照片（自动压缩后随报告打印）</div>';
     el.appendChild(box);
     const set = k => v => { issue[k] = v; scheduleSave(); };
@@ -713,12 +713,12 @@ function renderItem(i){
       (issue.photos||[]).forEach((p,idx)=>{
         const d = document.createElement('div'); d.className = 'ph';
         d.innerHTML = '<img src="'+p+'"><span class="x" title="删除">✕</span>';
-        d.querySelector('.x').addEventListener('click', ()=>{ issue.photos.splice(idx,1); scheduleSave(); renderItem(i); });
+        d.querySelector('.x').addEventListener('click', ()=>{ issue.photos.splice(idx,1); scheduleSave(); el.replaceWith(renderItem(i)); });
         phWrap.appendChild(d);
       });
     };
     renderPhotos();
-    box.querySelector('[data-addph]').addEventListener('click', ()=>box.querySelector('[data-file]').click());
+    // 移动端兼容：用 <label for> 原生触发文件选择（微信 iOS 等不响应 JS 对隐藏 input 的 click）
     box.querySelector('[data-file]').addEventListener('change', async e=>{
       const files = Array.from(e.target.files || []);
       for(const f of files){
@@ -727,7 +727,9 @@ function renderItem(i){
           issue.photos.push(data);
         }catch(err){ alert('图片读取失败：'+f.name); }
       }
-      scheduleSave(); renderItem(i);
+      scheduleSave();
+      // 局部重建当前检查项，让缩略图立即显示
+      el.replaceWith(renderItem(i));
     });
   }
   return el;
@@ -763,7 +765,7 @@ function renderRooms(){
     }
     const vals = room.h.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
     const diff = vals.length>=2 ? Math.round((Math.max(...vals)-Math.min(...vals))*10)/10 : '';
-    cells += '<td style="font-weight:700;color:'+(diff!==''&&diff>20?'var(--c-fail)':'var(--c-pass)')+'">'+diff+'</td>';
+    cells += '<td data-diff style="font-weight:700;color:'+(diff!==''&&diff>20?'var(--c-fail)':'var(--c-pass)')+'">'+diff+'</td>';
     cells += '<td><input data-k="k" inputmode="numeric" value="'+esc(room.k)+'"></td>';
     cells += '<td><input data-k="j" inputmode="numeric" value="'+esc(room.j)+'"></td>';
     cells += '<td><input data-k="d" inputmode="numeric" value="'+esc(room.d)+'"></td>';
@@ -775,7 +777,13 @@ function renderRooms(){
         if(k === 'name') room.name = inp.value;
         else if(k.startsWith('h')) room.h[+k.slice(1)] = inp.value;
         else room[k] = inp.value;
-        scheduleSave(); renderRooms();
+        scheduleSave();
+        // 只更新本行极差列，不重建表格，避免输入框失焦导致无法连续输入
+        const vals = room.h.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+        const d = vals.length>=2 ? Math.round((Math.max(...vals)-Math.min(...vals))*10)/10 : '';
+        const td = tr.querySelector('[data-diff]');
+        td.textContent = d;
+        td.style.color = (d!=='' && d>20) ? 'var(--c-fail)' : 'var(--c-pass)';
       });
     });
     tr.querySelector('.rm').addEventListener('click', ()=>{ state.rooms.splice(ri,1); scheduleSave(); renderRooms(); });
@@ -1109,27 +1117,36 @@ async function exportPdf(){
       pagebreak: {mode:['css','legacy']}
     }).from(el).toPdf().output('blob');
     hidePdfMask();
-    // 尝试自动下载；部分内置浏览器会拦截，再给出手动保存入口
-    let autoSaved = false, url = null;
-    try{
-      url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = pdfFileName();
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      autoSaved = true;
-      setTimeout(()=>URL.revokeObjectURL(url), 5*60*1000);
-    }catch(e){ autoSaved = false; }
+    // 非微信环境尝试自动下载；微信内置浏览器常静默拦截，交给完成弹层引导
+    let autoSaved = false;
+    if(!isWeChat()){
+      try{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = pdfFileName();
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        autoSaved = true;
+        setTimeout(()=>URL.revokeObjectURL(url), 5*60*1000);
+      }catch(e){ autoSaved = false; }
+    }
     showPdfDone(blob, autoSaved);
   }catch(e){
     hidePdfMask();
     alert('PDF生成失败：' + (e && e.message ? e.message : e) + '。可改用电脑浏览器打开本页面打印。');
   }
 }
+function isWeChat(){
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+function isIOS(){
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 function showPdfDone(blob, autoSaved){
   if(document.getElementById('pdfDone')) return;
+  const wx = isWeChat();
   let url = null;
   try{ url = URL.createObjectURL(blob); }catch(e){}
   const d = document.createElement('div');
@@ -1137,30 +1154,112 @@ function showPdfDone(blob, autoSaved){
   d.className = 'no-print';
   d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px';
   const box = document.createElement('div');
-  box.style.cssText = 'background:#fff;border-radius:12px;max-width:420px;width:100%;padding:22px 18px;font-size:14px;line-height:1.7;color:#333;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center';
+  box.style.cssText = 'background:#fff;border-radius:12px;max-width:420px;width:100%;padding:22px 18px;font-size:14px;line-height:1.6;color:#333;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center;max-height:86vh;overflow-y:auto';
   box.innerHTML = '<div style="font-size:42px">✅</div>' +
-    '<div style="font-weight:700;font-size:16px;margin:4px 0 6px">PDF 已生成</div>' +
-    '<div id="pdfDoneHint" style="color:#666;font-size:13px;margin-bottom:12px"></div>';
+    '<div style="font-weight:700;font-size:16px;margin:4px 0 2px">PDF 已生成</div>' +
+    '<div style="color:#999;font-size:12px;margin-bottom:12px;word-break:break-all">'+(blob.size/1048576).toFixed(1)+' MB · '+esc(pdfFileName())+'</div>' +
+    '<div id="pdfDoneHint" style="color:#666;font-size:13px;margin-bottom:12px;text-align:left"></div>';
   const hint = box.querySelector('#pdfDoneHint');
-  hint.textContent = autoSaved
-    ? '文件已开始下载；如未看到下载提示，请点击下方按钮保存。'
-    : '点击下方按钮保存PDF文件；微信内如无法保存，请点右上角「···」→「在浏览器打开」后重新生成。';
+  const setHint = t => { hint.innerHTML = t; };
+  const btnStyle = 'display:block;width:100%;padding:11px 0;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px';
+  const btnStyleGhost = btnStyle + ';border:1px solid #d1d5db;background:#fff;color:#333';
+
+  // 主按钮：下载 / 保存
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '💾 下载 / 保存PDF';
+  saveBtn.style.cssText = btnStyle + ';border:0;background:#1d4ed8;color:#fff';
+  saveBtn.addEventListener('click', async ()=>{
+    saveBtn.disabled = true;
+    try{
+      // iOS（Safari）：优先调起系统分享面板，可「存储到文件」或发送到微信
+      if(isIOS() && navigator.share && navigator.canShare){
+        try{
+          const file = new File([blob], pdfFileName(), {type:'application/pdf'});
+          if(navigator.canShare({files:[file]})){
+            // 60s 超时兜底：极端环境下分享面板未弹出时继续走下载
+            const shown = await Promise.race([
+              navigator.share({files:[file], title:pdfFileName()}).then(()=>true),
+              new Promise(r=>setTimeout(()=>r(false), 60000))
+            ]);
+            if(shown){
+              setHint('已调起系统面板，请选择「存储到文件」或发送到微信。');
+              return;
+            }
+          }
+        }catch(e){ if(e && e.name === 'AbortError') return; }
+      }
+      // 常规下载：Chrome 等浏览器会弹出下载确认 / 通知
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = u;
+      a.download = pdfFileName();
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(u), 5*60*1000);
+      if(wx){
+        setHint('已尝试触发下载。<b>若微信内无反应</b>（iOS 微信不支持直接保存文件），请：<br>① 点右上角「···」→「在浏览器打开」→ 重新生成PDF并保存；<br>② 或点下方「复制页面链接」，粘贴到浏览器打开。');
+      }else{
+        setHint('已开始下载，请查看浏览器下载列表 / 通知栏。');
+      }
+    }catch(e){
+      setHint('保存失败：'+esc(e && e.message ? e.message : e)+'。微信内请点右上角「···」→「在浏览器打开」后重试。');
+    }finally{ saveBtn.disabled = false; }
+  });
+  box.appendChild(saveBtn);
+
+  // 预览按钮
   if(url){
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = pdfFileName();
-    a.textContent = '💾 保存 / 打开PDF';
-    a.style.cssText = 'display:block;width:100%;padding:11px 0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:10px';
-    box.appendChild(a);
+    const openBtn = document.createElement('button');
+    openBtn.textContent = '📖 打开预览PDF';
+    openBtn.style.cssText = btnStyleGhost;
+    openBtn.addEventListener('click', ()=>{
+      try{
+        window.open(url, '_blank');
+        setHint('已尝试在新窗口打开PDF。若显示空白，请用「下载 / 保存」或到浏览器中打开本页面。');
+      }catch(e){ setHint('预览失败，请改用「下载 / 保存」按钮。'); }
+    });
+    box.appendChild(openBtn);
   }
-  const btn = document.createElement('button');
-  btn.textContent = '关闭';
-  btn.style.cssText = 'display:block;width:100%;padding:10px 0;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#333;font-weight:600;font-size:14px;cursor:pointer';
-  btn.addEventListener('click', ()=>{
+
+  // 微信专属：复制页面链接
+  if(wx){
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 复制页面链接';
+    copyBtn.style.cssText = btnStyleGhost;
+    copyBtn.addEventListener('click', async ()=>{
+      let ok = false;
+      try{ await navigator.clipboard.writeText(location.href); ok = true; }
+      catch(e){
+        try{
+          const ta = document.createElement('textarea');
+          ta.value = location.href;
+          ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+          document.body.appendChild(ta);
+          ta.select();
+          ok = document.execCommand('copy');
+          ta.remove();
+        }catch(e2){ ok = false; }
+      }
+      setHint(ok ? '✅ 链接已复制。粘贴到浏览器地址栏打开本页面，重新生成PDF后即可保存。' : '复制失败，请手动长按地址栏复制网址。');
+    });
+    box.appendChild(copyBtn);
+  }
+
+  setHint(autoSaved
+    ? '文件已开始下载；如未看到下载提示，请点击下方按钮保存。'
+    : (wx ? '微信内可能无法直接下载文件，请按下方提示操作。' : '点击下方按钮保存PDF文件。'));
+
+  // 关闭
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '关闭';
+  closeBtn.style.cssText = btnStyle + ';border:0;background:#f3f4f6;color:#333;margin-bottom:0';
+  closeBtn.addEventListener('click', ()=>{
     d.remove();
     if(url) setTimeout(()=>URL.revokeObjectURL(url), 1000);
   });
-  box.appendChild(btn);
+  box.appendChild(closeBtn);
   d.appendChild(box);
   document.body.appendChild(d);
 }
