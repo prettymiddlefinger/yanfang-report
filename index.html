@@ -155,6 +155,7 @@ tr,figure{page-break-inside:avoid}
 @media print{
   @page{size:A4;margin:13mm 11mm}
   body{background:#fff}
+  .no-print{display:none !important}
 }
 </style>
 </head>
@@ -204,12 +205,12 @@ tr,figure{page-break-inside:avoid}
         <div class="field"><label>联系电话</label><input id="f_phone"></div>
         <div class="field"><label>委托单位（可选）</label><input id="f_client"></div>
         <div class="field"><label>验房机构（可选）</label><input id="f_org"></div>
-        <div class="field"><label>验房师 *</label><input id="f_inspector"></div>
+        <div class="field"><label>验房师 *</label><input id="f_inspector" placeholder="曹加龙"></div>
         <div class="field"><label>验房日期 *</label><input id="f_date" type="date"></div>
         <div class="field"><label>天气</label><input id="f_weather" placeholder="如：晴"></div>
       </div>
       <div class="field" style="margin-top:10px"><label>检测工具（可修改）</label>
-        <input id="f_tools" value="空鼓锤、2m靠尺、楔形塞尺、1m垂直检测尺、200mm直角检测尺、水平尺、激光测距仪、钢卷尺（5m）、钢直尺、游标卡尺、坡度尺、插座检测仪（相位仪）、验电器、测力计、压力表、水桶（蓄水试验）、通球">
+        <input id="f_tools" value="空鼓锤、2m靠尺、楔形塞尺、1m垂直检测尺、200mm直角检测尺、水平尺、激光测距仪、钢卷尺（5m）、钢直尺、游标卡尺、坡度尺、插座检测仪（相位仪）、验电器、测力计、压力表、水桶（蓄水试验）">
       </div>
     </div>
   </div>
@@ -370,16 +371,7 @@ const MAOPEI = [
     it('M_K2','燃气设施','燃气表、管线预留到位，阀门启闭正常','观察'),
     it('M_K3','洞口气密','入户门、窗洞口尺寸与设计相符，收口严密','钢尺'),
   ]},
-  {id:'m12', name:'十二、公共部位（如适用）', items:[
-    it('M_L1','楼梯踏步','每梯段测不少于3处，相邻踏步高差≤10mm','钢尺实测'),
-    it('M_L2','走廊净高净宽','公共走道净高每10延米检查1处，净宽符合设计','激光测距仪'),
-    it('M_L3','电梯前室','电梯候梯厅深度、电梯门净宽符合设计','激光测距仪'),
-    it('M_L4','公共部位质量','公共部位墙面、地面无渗漏、破损','观察'),
-  ]},
-  {id:'m13', name:'十三、室内环境专项（可选）', items:[
-    it('M_M1','甲醛','≤0.08mg/m³（GB 50325-2020，Ⅰ类民用建筑）','检测仪'),
-    it('M_M2','TVOC','≤0.45mg/m³','检测仪'),
-    it('M_M3','苯','≤0.06mg/m³','检测仪'),
+  {id:'m13', name:'十二、室内环境专项（可选）', items:[
     it('M_M4','室内噪声','卧室昼间≤45dB(A)','噪声计'),
   ]},
 ];
@@ -510,9 +502,6 @@ const JINGZHUANG = [
     it('J_L6','紧急呼叫按钮','按下紧急呼叫按钮，物服中心能接收到报警信号及报警房间号','观察＋测试'),
   ]},
   {id:'j13', name:'十三、室内环境专项（可选）', items:[
-    it('J_M1','甲醛','≤0.08mg/m³（GB 50325-2020，Ⅰ类民用建筑）','检测仪'),
-    it('J_M2','TVOC','≤0.45mg/m³','检测仪'),
-    it('J_M3','苯','≤0.06mg/m³','检测仪'),
     it('J_M4','室内噪声','卧室昼间≤45dB(A)','噪声计'),
   ]},
 ];
@@ -531,7 +520,7 @@ function blankState(){
   const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   return {
     v:1, mode:'maopei',
-    info:{no:'YF-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-01', community:'', building:'', room:'', area:'', inner:'', struct:'框架结构', owner:'', phone:'', client:'', org:'', inspector:'', date:ds, weather:'', tools:'空鼓锤、2m靠尺、楔形塞尺、1m垂直检测尺、200mm直角检测尺、水平尺、激光测距仪、钢卷尺（5m）、钢直尺、游标卡尺、坡度尺、插座检测仪（相位仪）、验电器、测力计、压力表、水桶（蓄水试验）、通球'},
+    info:{no:'YF-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-01', community:'', building:'', room:'', area:'', inner:'', struct:'框架结构', owner:'', phone:'', client:'', org:'', inspector:'曹加龙', date:ds, weather:'', tools:'空鼓锤、2m靠尺、楔形塞尺、1m垂直检测尺、200mm直角检测尺、水平尺、激光测距仪、钢卷尺（5m）、钢直尺、游标卡尺、坡度尺、插座检测仪（相位仪）、验电器、测力计、压力表、水桶（蓄水试验）'},
     expanded:{},
     results:{},
     rooms:[
@@ -546,10 +535,19 @@ function blankState(){
     ],
   };
 }
+function normalizeState(s){
+  // 兼容旧版本保存的数据：验房师默认为曹加龙，检测工具中移除“通球”
+  if(!s.info) s.info = {};
+  if(!s.info.inspector) s.info.inspector = '曹加龙';
+  if(typeof s.info.tools === 'string'){
+    s.info.tools = s.info.tools.replace(/通球/g,'').replace(/、{2,}/g,'、').replace(/^、|、$/g,'');
+  }
+  return s;
+}
 function loadState(){
   try{
     const raw = localStorage.getItem(KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.v === 1){ if(!s.expanded) s.expanded = {}; return s; } }
+    if(raw){ const s = JSON.parse(raw); if(s && s.v === 1){ if(!s.expanded) s.expanded = {}; return normalizeState(s); } }
   }catch(e){}
   return blankState();
 }
@@ -991,7 +989,7 @@ function openReport(){
   bar.id = 'printBar';
   bar.className = 'no-print';
   bar.style.cssText = 'position:fixed;top:12px;right:12px;z-index:99;display:flex;gap:8px';
-  bar.innerHTML = '<button class="btn btn-primary" onclick="window.print()">🖨 打印 / 另存为PDF</button>' +
+  bar.innerHTML = '<button class="btn btn-primary" onclick="doPrint()">🖨 打印 / 另存为PDF</button>' +
                   '<button class="btn btn-ghost" onclick="closeReport()">← 返回编辑</button>';
   document.body.appendChild(bar);
 }
@@ -1001,6 +999,57 @@ function closeReport(){
   if(bar) bar.remove();
   window.scrollTo(0,0);
   document.title = '成都市住宅验房报告生成器';
+}
+
+/* —— 打印：检测浏览器是否真正支持 window.print，不支持时给出指引 —— */
+function doPrint(){
+  if(typeof window.print !== 'function'){ showPrintHelp(); return; }
+  let fired = false, finished = false;
+  const mql = window.matchMedia ? window.matchMedia('print') : null;
+  function onFire(){ fired = true; cleanup(); }
+  function cleanup(){
+    finished = true;
+    window.removeEventListener('beforeprint', onFire);
+    window.removeEventListener('afterprint', onFire);
+    if(mql){
+      if(mql.removeEventListener) mql.removeEventListener('change', onFire);
+      else if(mql.removeListener) mql.removeListener(onFire);
+    }
+  }
+  window.addEventListener('beforeprint', onFire);
+  window.addEventListener('afterprint', onFire);
+  if(mql){
+    if(mql.addEventListener) mql.addEventListener('change', onFire);
+    else if(mql.addListener) mql.addListener(onFire);
+  }
+  try{ window.focus(); window.print(); }
+  catch(e){ cleanup(); showPrintHelp(); return; }
+  // 微信、QQ 等内置浏览器会静默忽略 print：超时未触发打印事件则弹出指引
+  setTimeout(()=>{ if(!finished && !fired){ cleanup(); showPrintHelp(); } }, 1200);
+}
+function showPrintHelp(){
+  if(document.getElementById('printHelp')) return;
+  const d = document.createElement('div');
+  d.id = 'printHelp';
+  d.className = 'no-print';
+  d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:12px;max-width:440px;width:100%;padding:20px 18px;font-size:14px;line-height:1.7;color:#333;box-shadow:0 8px 32px rgba(0,0,0,.3)';
+  box.innerHTML =
+    '<div style="font-weight:700;font-size:16px;margin-bottom:6px">⚠️ 当前浏览器未响应打印请求</div>' +
+    '<div style="color:#666;font-size:13px;margin-bottom:8px">微信、QQ 等内置浏览器不支持直接打印，请任选一种方式：</div>' +
+    '<ol style="margin:0 0 4px;padding-left:20px">' +
+    '<li>点击右上角「···」→「在浏览器打开」，再用浏览器菜单中的「打印 / 另存为 PDF」；</li>' +
+    '<li>把网址发到电脑浏览器打开，点击「🖨 打印 / 另存为PDF」，打印机选择「另存为 PDF」；</li>' +
+    '<li>如果已经弹出打印窗口，请直接关闭本提示。</li>' +
+    '</ol>';
+  const btn = document.createElement('button');
+  btn.textContent = '知道了';
+  btn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:10px 0;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700;font-size:15px;cursor:pointer';
+  btn.addEventListener('click', ()=>d.remove());
+  box.appendChild(btn);
+  d.appendChild(box);
+  document.body.appendChild(d);
 }
 
 /* ================= 导入导出 ================= */
@@ -1021,7 +1070,7 @@ function importData(input){
     try{
       const s = JSON.parse(rd.result);
       if(!s || s.v !== 1) throw new Error('版本不符');
-      state = s;
+      state = normalizeState(s);
       curMode = state.info.type === 'jingzhuang' ? 'jingzhuang' : state.mode === 'jingzhuang' ? 'jingzhuang' : 'maopei';
       refreshAll();
       alert('导入成功');
