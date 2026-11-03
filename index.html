@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>成都市住宅验房报告生成器</title>
+<meta name="theme-color" content="#1d4ed8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="验房报告">
+<meta name="description" content="成都市标准住宅验房报告生成工具，依据川建行规〔2024〕6号等标准，支持毛坯房/精装房验收报告一键生成">
+<style>
+:root{
+  --c-ink:#1f2937; --c-sub:#6b7280; --c-line:#e5e7eb; --c-bg:#f5f6f8;
+  --c-brand:#1d4ed8; --c-brand-d:#1e40af; --c-pass:#16a34a; --c-pass-bg:#f0fdf4;
+  --c-fail:#dc2626; --c-fail-bg:#fef2f2; --c-na:#9ca3af; --c-warn:#b45309;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;color:var(--c-ink);background:var(--c-bg);font-size:14px;line-height:1.55}
+#app{max-width:1080px;margin:0 auto;padding:16px 16px 96px}
+h1{font-size:20px;margin:0}
+.sub{color:var(--c-sub);font-size:12px;margin-top:2px}
+.card{background:#fff;border:1px solid var(--c-line);border-radius:8px;margin-top:14px;overflow:hidden}
+.card>.hd{padding:10px 14px;background:#fafafa;border-bottom:1px solid var(--c-line);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card>.bd{padding:12px 14px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.tabs{display:flex;gap:0;border:1px solid var(--c-line);border-radius:8px;overflow:hidden;background:#fff}
+.tabs button{border:0;background:#fff;padding:9px 18px;font-size:14px;cursor:pointer;color:var(--c-sub)}
+.tabs button.on{background:var(--c-brand);color:#fff;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px 12px}
+.field label{display:block;font-size:12px;color:var(--c-sub);margin-bottom:2px}
+.field input,.field select,.field textarea{width:100%;padding:6px 8px;border:1px solid var(--c-line);border-radius:6px;font-size:13px;font-family:inherit;background:#fff}
+.field input:focus,.field textarea:focus{border-color:var(--c-brand);outline:none}
+.sec{margin-top:10px;border:1px solid var(--c-line);border-radius:8px;background:#fff}
+.sec>.sh{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none}
+.sec>.sh .t{font-weight:600;flex:1}
+.sec>.sh .cnt{font-size:12px;color:var(--c-sub)}
+.sec>.sh .badge{font-size:11px;padding:1px 8px;border-radius:10px;font-weight:600}
+.sec>.sh .b-pass{background:var(--c-pass-bg);color:var(--c-pass)}
+.sec>.sh .b-fail{background:var(--c-fail-bg);color:var(--c-fail)}
+.sec>.sh .ops{display:flex;gap:6px}
+.sec>.sh .ops button{font-size:11px;border:1px solid var(--c-line);background:#fff;border-radius:5px;padding:2px 8px;cursor:pointer;color:var(--c-sub)}
+.sec>.sh .ops button:hover{border-color:var(--c-brand);color:var(--c-brand)}
+.sec>.sc{border-top:1px solid var(--c-line)}
+.itm{display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid #f3f4f6;align-items:flex-start}
+.itm:last-child{border-bottom:0}
+.itm .nm{flex:1;min-width:0}
+.itm .nm .n{font-weight:500}
+.itm .nm .s{font-size:12px;color:var(--c-sub);margin-top:1px}
+.itm .nm .m{display:inline-block;font-size:11px;color:#0369a1;background:#f0f9ff;border-radius:4px;padding:0 6px;margin-top:3px}
+.itm .tag-main{display:inline-block;font-size:10px;color:#fff;background:var(--c-warn);border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:1px}
+.rbtns{display:flex;gap:0;border:1px solid var(--c-line);border-radius:6px;overflow:hidden;flex-shrink:0;align-self:center}
+.rbtns button{border:0;background:#fff;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--c-sub)}
+.rbtns button+button{border-left:1px solid var(--c-line)}
+.rbtns button.on-pass{background:var(--c-pass);color:#fff}
+.rbtns button.on-fail{background:var(--c-fail);color:#fff}
+.rbtns button.on-na{background:var(--c-na);color:#fff}
+.issue{margin:6px 12px 10px;border:1px solid #fecaca;background:var(--c-fail-bg);border-radius:8px;padding:10px}
+.issue .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.issue label{display:block;font-size:12px;color:var(--c-sub);margin-bottom:2px}
+.issue input,.issue select,.issue textarea{width:100%;padding:5px 8px;border:1px solid #fca5a5;border-radius:6px;font-size:13px;font-family:inherit;background:#fff}
+.photos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.photos .ph{position:relative;width:74px;height:74px;border:1px solid var(--c-line);border-radius:6px;overflow:hidden;background:#fff}
+.photos .ph img{width:100%;height:100%;object-fit:cover}
+.photos .ph .x{position:absolute;top:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px;line-height:1;padding:3px 5px;cursor:pointer;border-radius:0 0 0 6px}
+.photos .add{width:74px;height:74px;border:1px dashed var(--c-line);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--c-sub);cursor:pointer;font-size:22px;background:#fff}
+.photos .add:hover{border-color:var(--c-brand);color:var(--c-brand)}
+.statbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--c-line);box-shadow:0 -4px 16px rgba(0,0,0,.08);z-index:50}
+.statbar .in{max-width:1080px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.statbar .st{font-size:13px}
+.statbar .st b{font-size:15px}
+.statbar .st .ok{color:var(--c-pass)} .statbar .st .no{color:var(--c-fail)}
+.statbar .rate{font-weight:700;color:var(--c-brand)}
+.statbar .sp{flex:1}
+.btn{border:0;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-primary{background:var(--c-brand);color:#fff;font-weight:600}
+.btn-primary:hover{background:var(--c-brand-d)}
+.btn-ghost{background:#fff;border:1px solid var(--c-line);color:var(--c-ink)}
+.btn-ghost:hover{border-color:var(--c-brand);color:var(--c-brand)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.roomtbl{width:100%;border-collapse:collapse;font-size:13px}
+.roomtbl th,.roomtbl td{border:1px solid var(--c-line);padding:5px 6px;text-align:center}
+.roomtbl th{background:#fafafa;font-weight:600;font-size:12px}
+.roomtbl input{width:100%;border:0;background:transparent;text-align:center;font-size:13px;font-family:inherit;padding:2px}
+.roomtbl input:focus{outline:none;background:#eff6ff}
+.roomtbl .rm{color:var(--c-fail);cursor:pointer;font-weight:700}
+.hint{font-size:12px;color:var(--c-sub);margin-top:6px}
+/* ============ 移动端适配 ============ */
+@media (max-width: 720px){
+  body{font-size:15px}
+  #app{padding:10px 10px 110px}
+  .topbar h1{font-size:17px}
+  .topbar .sub{font-size:11px}
+  .card>.bd{padding:10px}
+  .grid{grid-template-columns:1fr 1fr;gap:6px 10px}
+  .field input,.field select,.field textarea{font-size:16px;padding:8px}
+  .tabs button{padding:11px 12px;font-size:13px;flex:1}
+  .itm{flex-wrap:wrap;padding:10px}
+  .itm .nm{flex-basis:100%}
+  .itm .nm .s{font-size:12px}
+  .rbtns{width:100%;margin-top:8px}
+  .rbtns button{flex:1;padding:11px 0;font-size:14px}
+  .sec>.sh{padding:12px 10px}
+  .sec>.sh .cnt{display:none}
+  .sec>.sh .ops button{padding:6px 10px;font-size:12px}
+  .issue .ig{grid-template-columns:1fr}
+  .issue input,.issue select,.issue textarea{font-size:16px}
+  .photos .ph,.photos .add{width:64px;height:64px}
+  .roomwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .roomtbl{min-width:760px}
+  .statbar .in{gap:6px;padding:8px 10px}
+  .statbar .st{font-size:12px}
+  .statbar .st b{font-size:14px}
+  .btn{padding:10px 14px;font-size:14px}
+  .statbar .btn-primary{flex:1}
+  .hint{font-size:11px}
+}
+/* ============ 报告打印样式 ============ */
+#report{display:none;background:#fff}
+body.printing #app .no-print{display:none !important}
+body.printing #report{display:block}
+body.printing{background:#fff}
+body.printing #app{max-width:100%;padding:0}
+.rp{font-family:"SimSun","宋体",serif;color:#000;font-size:10.5pt;line-height:1.6;padding:0 4mm}
+.rp h1{font-size:22pt;text-align:center;margin:6mm 0 2mm;letter-spacing:6px}
+.rp h2{font-size:14pt;text-align:center;margin:0 0 5mm;letter-spacing:2px}
+.rp h3{font-size:12pt;margin:5mm 0 2mm;border-left:4px solid #1d4ed8;padding-left:8px}
+.rp h4{font-size:11pt;margin:3mm 0 1.5mm}
+.rp table{width:100%;border-collapse:collapse;margin:1.5mm 0}
+.rp th,.rp td{border:0.6pt solid #333;padding:2.5pt 4pt;font-size:9.5pt;vertical-align:top;text-align:left}
+.rp th{background:#f0f2f5;font-weight:700;text-align:center}
+.rp td.c,.rp th.c{text-align:center}
+.rp .cover{border-bottom:2px solid #1d4ed8;padding-bottom:6mm;margin-bottom:4mm}
+.rp .cover-meta{display:grid;grid-template-columns:1fr 1fr;gap:2mm 8mm;margin-top:4mm}
+.rp .cover-meta div{font-size:11pt}
+.rp .kv td:first-child{width:22%;background:#f7f8fa;font-weight:600}
+.rp .fail td{background:#fef2f2}
+.rp .fail .res{color:#dc2626;font-weight:700}
+.rp .pass .res{color:#16a34a}
+.rp .lv{display:inline-block;padding:0 6px;border-radius:4px;font-size:9pt;font-weight:700}
+.rp .lv-1{background:#dc2626;color:#fff}
+.rp .lv-2{background:#b45309;color:#fff}
+.rp .lv-3{background:#6b7280;color:#fff}
+.rp .photos-grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.rp .photos-grid figure{margin:0;border:1px solid #999;padding:2mm;page-break-inside:avoid}
+.rp .photos-grid img{width:100%;display:block}
+.rp .photos-grid figcaption{font-size:9pt;text-align:center;margin-top:1mm}
+.rp .sig{display:flex;justify-content:space-between;margin-top:10mm;font-size:11pt}
+.rp .sig div{text-align:center}
+.rp .foot{font-size:8.5pt;color:#444;margin-top:6mm;border-top:0.6pt solid #999;padding-top:2mm}
+.pb{page-break-before:always}
+tr,figure{page-break-inside:avoid}
+@media print{
+  @page{size:A4;margin:13mm 11mm}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar no-print">
+    <div>
+      <h1>🏠 成都市住宅验房报告生成器</h1>
+      <div class="sub">依据《四川省住宅工程质量分户验收管理规定》（川建行规〔2024〕6号）、《成都市住宅工程质量分户验收指南（2022版）》、《成都市成品住宅装修交付验收技术指引》（2026）编制</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">导出数据</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importFile').click()">导入数据</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+      <button class="btn btn-ghost btn-sm" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+
+  <!-- 模式切换 -->
+  <div class="card no-print">
+    <div class="bd" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-weight:600">房屋类型：</span>
+      <div class="tabs" id="modeTabs">
+        <button data-mode="maopei" class="on">毛坯房（清水房）</button>
+        <button data-mode="jingzhuang">精装房（成品住宅）</button>
+      </div>
+      <span class="sub">切换类型后检查清单自动更换，已填数据分别保留</span>
+    </div>
+  </div>
+
+  <!-- 基本信息 -->
+  <div class="card no-print">
+    <div class="hd">📋 房屋基本信息</div>
+    <div class="bd">
+      <div class="grid">
+        <div class="field"><label>报告编号</label><input id="f_no"></div>
+        <div class="field"><label>小区名称 *</label><input id="f_community" placeholder="如：XX花园"></div>
+        <div class="field"><label>楼栋号</label><input id="f_building" placeholder="如：3栋"></div>
+        <div class="field"><label>单元/房号 *</label><input id="f_room" placeholder="如：2单元1503"></div>
+        <div class="field"><label>建筑面积（㎡）</label><input id="f_area" inputmode="decimal"></div>
+        <div class="field"><label>套内面积（㎡）</label><input id="f_inner" inputmode="decimal"></div>
+        <div class="field"><label>结构类型</label>
+          <select id="f_struct"><option>框架结构</option><option>框剪结构</option><option>剪力墙结构</option><option>砖混结构</option></select>
+        </div>
+        <div class="field"><label>业主姓名</label><input id="f_owner"></div>
+        <div class="field"><label>联系电话</label><input id="f_phone"></div>
+        <div class="field"><label>委托单位（可选）</label><input id="f_client"></div>
+        <div class="field"><label>验房机构（可选）</label><input id="f_org"></div>
+        <div class="field"><label>验房师 *</label><input id="f_inspector"></div>
+        <div class="field"><label>验房日期 *</label><input id="f_date" type="date"></div>
+        <div class="field"><label>天气</label><input id="f_weather" placeholder="如：晴"></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label>检测工具（可修改）</label>
+        <input id="f_tools" value="空鼓锤、2m靠尺、楔形塞尺、1m垂直检测尺、200mm直角检测尺、水平尺、激光测距仪、钢卷尺（5m）、钢直尺、游标卡尺、坡度尺、插座检测仪（相位仪）、验电器、测力计、压力表、水桶（蓄水试验）、通球">
+      </div>
+    </div>
+  </div>
+
+  <!-- 检查清单 -->
+  <div class="card no-print">
+    <div class="hd">🔍 分项验收检查清单
+      <span class="sub" style="font-weight:400">（点击「问题」按钮后填写问题描述、位置与整改建议；标注「主控」的为安全与使用功能项目，必须合格）</span>
+    </div>
+    <div class="bd" id="checklist" style="padding:0 12px 14px"></div>
+  </div>
+
+  <!-- 空间尺寸实测 -->
+  <div class="card no-print">
+    <div class="hd">📐 空间尺寸实测记录
+      <span class="sub" style="font-weight:400">（净高每房间测5点：四角距墙300~500mm各1点＋房间几何中心1点；净高极差≤20mm为合格）</span>
+    </div>
+    <div class="bd">
+      <div class="roomwrap">
+      <table class="roomtbl">
+        <thead><tr>
+          <th style="width:90px">房间</th>
+          <th>净高点1</th><th>净高点2</th><th>净高点3</th><th>净高点4</th><th>净高点5</th>
+          <th>净高极差<br>(自动)</th><th>净开间</th><th>净进深</th><th>对角线差</th><th style="width:40px"></th>
+        </tr></thead>
+        <tbody id="roomBody"></tbody>
+      </table>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addRoom()">＋ 添加房间</button>
+      <div class="hint">单位：mm。卧室、起居室（厅）净高低于2400mm或偏差超过-50mm的，报告中将自动标注须书面告知业主。</div>
+    </div>
+  </div>
+
+  <!-- 底部统计条 -->
+  <div class="statbar no-print">
+    <div class="in">
+      <span class="st">检查项 <b id="stTotal">0</b></span>
+      <span class="st">合格 <b class="ok" id="stPass">0</b></span>
+      <span class="st">问题 <b class="no" id="stFail">0</b></span>
+      <span class="st">不适用 <b id="stNa">0</b></span>
+      <span class="st">合格点率 <span class="rate" id="stRate">—</span></span>
+      <span class="sp"></span>
+      <span class="sub" id="saveTip"></span>
+      <button class="btn btn-primary" onclick="openReport()">📄 生成报告</button>
+    </div>
+  </div>
+
+  <!-- 报告 -->
+  <div id="report"></div>
+</div>
+
+<script>
+"use strict";
+/* ================= 检查项目清单数据 =================
+   依据：
+   1.《四川省住宅工程质量分户验收管理规定》川建行规〔2024〕6号
+   2.《成都市住宅工程质量分户验收指南（2022版）》
+   3.《成都市成品住宅装修交付验收技术指引》（成都市住建局 2026年8月）
+   4. GB 50210-2018 / GB 50209-2010 / GB 50242-2002 / GB 50303-2015 /
+      GB 50096-2011 / GB 55038-2025 / GB 50325-2020 / DBJ51/015-2021 等
+================================================================ */
+function it(id, name, std, method, main){
+  return {id:id, name:name, std:std, method:method, main:!!main};
+}
+
+/* —— 空间尺寸（毛坯/精装共用，id 相同、结果互通）—— */
+const SEC_SPACE = [
+  it('B1','室内净高','每房间测不少于5处（四角距墙300~500mm各1点＋几何中心1点），净高极差≤20mm；卧室、起居室净高低于2.40m或偏差超-50mm须书面告知业主','激光测距仪实测',true),
+  it('B2','净开间、净进深','每房间抽测不少于2处（距墙角500mm），偏差符合设计文件要求','激光测距仪实测',true),
+  it('B3','房间方正度','对角线长度差不大于10mm（行业参考值，超差提示）','激光测距仪实测'),
+  it('B4','楼板平整度（同房净高极差）','同一房间地面净高极差≤20mm','激光测距仪实测'),
+  it('B5','室内楼梯踏步','每踏步测不少于3处（两端＋中心），相邻踏步高差≤10mm；踏步防滑处理到位','钢卷尺实测'),
+];
+
+/* —— 毛坯房（清水房）清单 —— */
+const MAOPEI = [
+  {id:'m1', name:'一、收房文件核查', items:[
+    it('M_A1','三书一证一表齐全','《住宅质量保证书》《住宅使用说明书》《建筑工程质量认定书》《开发建设项目竣工综合验收合格证》《竣工验收备案表》缺一不可','核对原件'),
+    it('M_A2','分户验收结果表','《住宅工程质量分户验收结果表》作为《住宅质量保证书》附件交付业主，并张贴在进户门后（川建行规〔2024〕6号第十四条）','观察核对'),
+    it('M_A3','面积核对','实测面积与合同约定面积误差≤3%','核对面积实测报告'),
+    it('M_A4','标识与档案','配电箱回路标识、暗埋水电管线走向标识齐全；一户一档（二维码）可查','观察核对'),
+  ]},
+  {id:'m2', name:'二、空间尺寸实测（主控）', items: SEC_SPACE},
+  {id:'m3', name:'三、墙面工程', items:[
+    it('M_C1','抹灰层空鼓','小锤轻击逐间全数检查：单块空鼓面积≤400cm²且每自然间（标准间）≤2处；阳角处无空鼓','空鼓锤轻击'),
+    it('M_C2','裂缝','无结构性裂缝（45°斜向贯通裂缝、沉降裂缝均不得存在）','目测'),
+    it('M_C3','起砂、脱皮、掉粉','抹灰面层无起砂、脱皮、掉粉','目测＋手摸'),
+    it('M_C4','墙面垂直度','2m垂直检测尺：普通抹灰≤4mm','2m垂直检测尺'),
+    it('M_C5','墙面平整度','2m靠尺＋楔形塞尺：≤4mm','2m靠尺'),
+    it('M_C6','阴阳角方正','200mm直角检测尺：≤4mm','直角检测尺'),
+    it('M_C7','渗水痕迹','无渗水痕迹、霉斑、水渍','目测'),
+    it('M_C8','拉毛/界面处理','墙面拉毛或界面处理到位，无钢丝网外露、无露筋','目测'),
+  ]},
+  {id:'m4', name:'四、地面工程', items:[
+    it('M_D1','地面空鼓','小锤轻击逐点检查：单块空鼓≤400cm²且每自然间≤2处','空鼓锤轻击'),
+    it('M_D2','裂缝','无贯穿性裂缝','目测'),
+    it('M_D3','起砂','水泥地面无起砂、脱皮','目测'),
+    it('M_D4','地面平整度','2m靠尺：水泥砂浆面层≤4mm','2m靠尺＋塞尺'),
+    it('M_D5','找平层质量','找平层厚度符合设计，无露筋、无蜂窝','目测'),
+    it('M_D6','排水坡度','有排水要求的地面不倒泛水、无积水，坡向地漏','泼水试验'),
+  ]},
+  {id:'m5', name:'五、顶棚工程', items:[
+    it('M_E1','顶棚平整度','2m靠尺：抹灰顶棚≤4mm','2m靠尺'),
+    it('M_E2','裂缝、渗水痕迹','无裂缝、无渗水痕迹（重点检查卫生间、厨房上层）','目测'),
+    it('M_E3','起皮、掉粉、露筋','无起皮、掉粉、露筋','目测'),
+    it('M_E4','抹灰粘结','顶棚抹灰层无空鼓、脱落风险','目测＋轻敲'),
+  ]},
+  {id:'m6', name:'六、门窗工程', items:[
+    it('M_F1','入户门','安装牢固、开启灵活、关闭严密、无倒翘；锁具、合页、猫眼、门吸齐全','观察＋开启关闭＋手扳'),
+    it('M_F2','外窗台防护','窗台高度低于900mm或落地窗必须设置防护栏杆，高度≥900mm且无负偏差','钢尺实测',true),
+    it('M_F3','推拉窗防脱落装置','推拉门窗扇必须安装防脱落装置，全数检查','观察',true),
+    it('M_F4','门窗框垂直度','框正、侧面垂直度：铝合金≤2.5mm、塑钢≤3mm','1m垂直检测尺'),
+    it('M_F5','安全玻璃','面积＞1.5㎡窗玻璃、7层及以上外开窗、阳台玻璃栏板等必须采用安全玻璃（3C认证标识）','观察3C标识',true),
+    it('M_F6','密封性能','密封条连续完整；关闭状态下A4纸抽不出（密封良好）','A4纸测试'),
+    it('M_F7','五金配件','五金配件齐全、安装牢固、使用灵活','观察＋手扳'),
+    it('M_F8','外窗排水孔','外窗排水孔畅通','观察'),
+    it('M_F9','玻璃质量','玻璃无裂纹、无破损','观察'),
+    it('M_F10','框与墙体缝隙','门窗框与墙体缝隙填嵌饱满，密封胶表面光滑、顺直、无裂纹','观察＋轻敲'),
+  ]},
+  {id:'m7', name:'七、栏杆护栏工程（主控）', items:[
+    it('M_G1','栏杆高度','临空处（阳台、外廊、露台等）栏杆净高：低层/多层≥1.05m，中高层及以上≥1.10m，无负偏差','钢尺实测',true),
+    it('M_G2','竖杆净距','垂直杆件间净距≤0.11m','钢尺实测',true),
+    it('M_G3','安装牢固','栏杆安装牢固，手扳无松动','手扳检查',true),
+    it('M_G4','防攀爬','可踏面以上栏杆无横向可攀爬构件','观察'),
+    it('M_G5','护栏玻璃','采用安全玻璃（3C标识），无裂纹','观察'),
+  ]},
+  {id:'m8', name:'八、防水工程（主控）', items:[
+    it('M_H1','厨卫阳台蓄水试验','卫生间、厨房、阳台蓄水≥24h，蓄水深度≥20mm，无渗漏','蓄水试验',true),
+    it('M_H2','泼水试验','地面泼水无积水','泼水试验'),
+    it('M_H3','外墙渗漏','雨后或淋水后观察外墙内表面无渗漏','雨后/淋水观察',true),
+    it('M_H4','外窗渗漏','雨后或淋水后检查，每个窗台不少于1处，无渗漏','雨后/淋水观察',true),
+    it('M_H5','管根、烟道周边','管道根部、烟道周边无渗漏痕迹','目测'),
+    it('M_H6','屋面（顶层）','平屋面雨后或蓄水≥20mm、坡屋面持续淋水2h后无渗漏；顶层逐户全数检查','蓄水/淋水',true),
+  ]},
+  {id:'m9', name:'九、给排水工程', items:[
+    it('M_I1','给水管道水压试验','试验压力=1.5倍工作压力且≥0.6MPa（设计未注明时）；金属及复合管10min压降≤0.02MPa不渗不漏；塑料管稳压1h压降≤0.05MPa','压力表＋计时',true),
+    it('M_I2','给水保压通水','保压24h后每户逐一打开用水点，检查阀门及接口无渗漏','通水检查'),
+    it('M_I3','排水管道通球','通球检查：球径≥排水管管径的2/3','通球试验',true),
+    it('M_I4','地漏','地漏平正、牢固、低于排水表面，周边无渗漏，排水顺畅','试水观察'),
+    it('M_I5','管道固定','管道固定牢固、间距合理、无变形','观察＋手扳'),
+    it('M_I6','存水弯、阻火圈','存水弯设置正确；高层排水立管阻火圈（防火圈）设置','观察'),
+    it('M_I7','冷热水管','冷热水管走向标识清晰、分色正确','观察'),
+    it('M_I8','烟道','烟道（排烟道）通畅，止回阀安装正确','观察'),
+  ]},
+  {id:'m10', name:'十、电气工程', items:[
+    it('M_J1','漏电保护器','配电箱漏电保护器动作试验有效','通电操作试验',true),
+    it('M_J2','回路标识','配电箱内线路回路标识清楚、准确','观察'),
+    it('M_J3','插座接线','插座接线正确（左零右火上接地），相位检测合格','插座检测仪',true),
+    it('M_J4','照明','照明灯具全数点亮','通电检查'),
+    it('M_J5','等电位联结','卫生间等电位端子盒设置齐全（观察检查，全数）','观察',true),
+    it('M_J6','开关面板','开关面板安装牢固、启闭正常','观察＋操作'),
+    it('M_J7','弱电接口','网络、电话、电视等弱电接口齐全','观察'),
+    it('M_J8','防溅插座','卫生间、阳台潮湿场所使用带盖防溅插座','观察'),
+    it('M_J9','线路安全','明敷管线整齐，无裸露线头、无违规接线','观察'),
+  ]},
+  {id:'m11', name:'十一、预留洞及附属设施', items:[
+    it('M_K1','空调预留孔','空调预留孔位置合理、向室外坡水、带护套管','观察'),
+    it('M_K2','燃气设施','燃气表、管线预留到位，阀门启闭正常','观察'),
+    it('M_K3','洞口气密','入户门、窗洞口尺寸与设计相符，收口严密','钢尺'),
+  ]},
+  {id:'m12', name:'十二、公共部位（如适用）', items:[
+    it('M_L1','楼梯踏步','每梯段测不少于3处，相邻踏步高差≤10mm','钢尺实测'),
+    it('M_L2','走廊净高净宽','公共走道净高每10延米检查1处，净宽符合设计','激光测距仪'),
+    it('M_L3','电梯前室','电梯候梯厅深度、电梯门净宽符合设计','激光测距仪'),
+    it('M_L4','公共部位质量','公共部位墙面、地面无渗漏、破损','观察'),
+  ]},
+  {id:'m13', name:'十三、室内环境专项（可选）', items:[
+    it('M_M1','甲醛','≤0.08mg/m³（GB 50325-2020，Ⅰ类民用建筑）','检测仪'),
+    it('M_M2','TVOC','≤0.45mg/m³','检测仪'),
+    it('M_M3','苯','≤0.06mg/m³','检测仪'),
+    it('M_M4','室内噪声','卧室昼间≤45dB(A)','噪声计'),
+  ]},
+];
+
+/* —— 精装房（成品住宅）清单 —— */
+const JINGZHUANG = [
+  {id:'j1', name:'一、收房文件核查', items:[
+    it('J_A1','三书一证一表齐全','《住宅质量保证书》《住宅使用说明书》《建筑工程质量认定书》《开发建设项目竣工综合验收合格证》《竣工验收备案表》缺一不可','核对原件'),
+    it('J_A2','分户验收结果表','《住宅工程质量分户验收结果表》交付业主并张贴在进户门后（川建行规〔2024〕6号）','观察核对'),
+    it('J_A3','装修交付资料','装修交付验收记录（指引附录B）及装修材料清单齐全','核对文件'),
+    it('J_A4','面积核对','实测面积与合同约定面积误差≤3%','核对面积实测报告'),
+    it('J_A5','设备品牌型号清单','主要设备（洁具、灶具、热水器、空调、烟机等）型号品牌清单，供现场对照','核对合同'),
+  ]},
+  {id:'j2', name:'二、空间尺寸实测（主控）', items: SEC_SPACE},
+  {id:'j3', name:'三、建筑地面', items:[
+    it('J_C1','地砖放射性','地砖放射性限量合格（同厂家同品种同规格同批次查检测报告一次）','查检测报告'),
+    it('J_C2','地砖空鼓','局部空鼓板块总数：≤60㎡不超过4块、60~100㎡（含）不超过6块、100~140㎡（含）不超过8块、＞140㎡不超过10块；每个房间空鼓板块≤该房间总量5%','小锤轻击全数检查'),
+    it('J_C3','地砖表面质量','表面洁净、图案清晰、色泽一致、接缝平整深浅一致周边顺直；板块无裂纹、掉角、缺楞','观察'),
+    it('J_C4','地砖平整度','2m靠尺＋楔形塞尺：≤2mm','2m靠尺'),
+    it('J_C5','地砖缝格平直','拉5m线（不足5m拉通线）：≤3mm','拉线＋钢尺'),
+    it('J_C6','地砖接缝高低差','≤0.5mm','钢尺＋楔形塞尺'),
+    it('J_C7','地砖板块间隙宽度','≤1mm','钢尺'),
+    it('J_C8','踢脚线','表面洁净、与柱墙结合牢固、高度及出墙厚度均匀一致；踢脚线上口平直：地砖3mm、石材1mm','观察＋小锤＋钢尺'),
+    it('J_C9','石材放射性','石材放射性限量合格（同批次查检测报告一次）','查检测报告'),
+    it('J_C10','石材空鼓','参照地砖执行；石材湿贴用于飘窗台时不应出现空鼓','小锤轻击全数检查'),
+    it('J_C11','石材表面质量','表面洁净平整无磨痕、图案清晰色泽一致、接缝均匀周边顺直镶嵌正确、无裂纹掉角缺棱、无泛碱污染；平整度1mm、缝格平直2mm、接缝高低差0.5mm','观察＋2m靠尺'),
+    it('J_C12','地板环保指标','地板游离甲醛（释放量或含量）、胶粘剂VOC/苯/甲苯+二甲苯等有害物质限量合格（同批次查检测报告）','查检测报告'),
+    it('J_C13','地板铺设质量','铺设牢固、行走无松动异响；接头缝隙严密、位置错开；板面缝隙：实木复合≤0.5mm；表面平整度≤2mm；板面拼缝平直≤3mm；相邻板材高差≤0.5mm','观察＋行走＋钢尺'),
+    it('J_C14','地毯质量','表面平服、拼缝粘贴牢固严密平整图案吻合；无起鼓、起皱、翘边、卷边、显拼缝、露线、毛边；绒面毛顺光一致、干净无污染损伤','观察'),
+    it('J_C15','排水地面坡度','有排水要求地面：不倒泛水、无积水，与地漏、管道结合处严密牢固无渗漏','泼水/坡度尺/蓄水'),
+    it('J_C16','楼梯台阶踏步','缝隙宽度一致；踏步面层做防滑处理，齿脚整齐，防滑条顺直牢固','观察＋钢尺'),
+  ]},
+  {id:'j4', name:'四、建筑墙面', items:[
+    it('J_D1','壁纸墙布拼接','各幅拼接横平竖直，拼接处花纹图案吻合，不离缝、不搭接、不显拼缝','距墙面1.5m观察'),
+    it('J_D2','壁纸墙布粘贴','粘贴牢固，无漏贴、补贴、脱层、空鼓和翘边','观察＋手摸'),
+    it('J_D3','壁纸墙布表面','表面平整，无波纹起伏、气泡、裂缝、皱折；色泽一致无斑污；斜视无胶痕；压痕及发泡层无损坏','观察＋手摸'),
+    it('J_D4','壁纸墙布细部','与装饰线、踢脚板、门窗框吻合严密顺直；电气槽盒交接处套割吻合无缝隙；边缘平直整齐无纸毛飞刺；阴角搭接顺光、阳角无接缝','观察'),
+    it('J_D5','壁纸墙布偏差','表面平整度≤3mm、立面垂直度≤3mm、阴阳角方正≤3mm','2m靠尺/垂直尺/直角尺'),
+    it('J_D6','涂料质量','涂饰均匀、粘结牢固，无漏涂、透底、起皮、开裂和掉粉','观察＋手摸'),
+    it('J_D7','涂料衔接','涂层与其他装修材料和设备衔接处吻合，界面清晰','观察'),
+    it('J_D8','涂料偏差','普通涂饰：立面垂直度≤3mm、表面平整度≤3mm、阴阳角方正≤3mm（高级涂饰≤2mm）','2m垂直尺/靠尺/直角尺'),
+    it('J_D9','饰面砖石材粘结','满粘法施工：陶瓷板、石材与基层粘结料饱满、无空鼓，粘结牢固；饰面砖大面和阳角无空鼓','小锤轻击全数检查'),
+    it('J_D10','饰面砖石材安装','安装牢固','手扳检查'),
+    it('J_D11','饰面砖石材表面','表面平整洁净色泽一致，无裂痕缺损；石材表面无泛碱污染；接缝平直光滑、填嵌连续密实','观察＋尺量'),
+    it('J_D12','饰面砖细部','墙面凸出物周围饰面砖整砖套割吻合、边缘整齐；孔洞套割吻合；填缝密实平直、色泽一致','观察＋尺量'),
+    it('J_D13','饰面砖石材偏差','立面垂直度≤2mm、表面平整度≤2~3mm、阴阳角方正≤2~3mm、接缝高低差≤1mm、接缝宽度≤1mm','垂直尺/靠尺/钢尺'),
+    it('J_D14','软硬包质量','单块面料无接缝、四周绷压严密；花纹图案吻合；电器槽盒开口位置尺寸正确、套割吻合、四周镶硬边；表面平整洁净无污染无凹凸皱折；内衬饱满边缘平齐；边框平整光滑顺直、拼角均匀对称','观察＋手摸'),
+  ]},
+  {id:'j5', name:'五、建筑顶棚', items:[
+    it('J_E1','整体面层吊顶安装','吊杆、龙骨和饰面材料安装必须牢固','观察＋手扳',true),
+    it('J_E2','整体面层吊顶表面','表面洁净、色泽一致，无翘曲、裂缝及缺损；压条平直宽窄一致；表面平整度≤3mm、缝格凹槽直线度≤3mm','观察＋尺量'),
+    it('J_E3','板块面层吊顶','安装稳固严密、吊杆龙骨安装必须牢固；石膏板平整度≤3mm、金属板≤2mm、矿棉板≤3mm、木/塑料/玻璃板≤2mm；接缝直线度≤2~3mm；接缝高低差≤1~2mm','手扳＋2m靠尺＋钢尺'),
+    it('J_E4','格栅吊顶','吊杆、龙骨和格栅安装必须牢固；表面洁净色泽一致无翘曲裂缝缺损；栅条角度一致、边缘整齐、接口无错位；金属龙骨接缝平整吻合无划伤','手扳＋观察',true),
+    it('J_E5','顶棚设备交接','饰面板上灯具、烟感器、喷淋头、风口箅子和检修口位置合理美观，交接吻合严密','观察'),
+    it('J_E6','非吊顶天棚','涂料面层涂饰质量同墙面涂料要求','观察＋手摸'),
+    it('J_E7','吊顶内管线','吊顶内各种设备管线布置合理美观','观察'),
+  ]},
+  {id:'j6', name:'六、户内门窗', items:[
+    it('J_F1','木门窗安装','安装牢固、开关灵活、关闭严密、无倒翘；配件安装牢固；割角拼缝严密平整，框扇裁口顺直刨面平整','观察＋开闭＋手扳'),
+    it('J_F2','木门窗留缝限值','门窗扇对口缝1~4mm、扇与上框1~3mm、扇与合页侧框1~3mm、门扇与下框3~5mm、窗扇与下框1~3mm、无下框时门扇与地面4~8mm','塞尺'),
+    it('J_F3','木门窗偏差','框正侧面垂直度≤2mm、框与扇接缝高低差≤1mm、扇与扇接缝高低差≤1mm；与墙体间缝隙填嵌饱满','1m垂直尺＋塞尺'),
+    it('J_F4','塑料门窗安装','框、附框和扇安装牢固；推拉扇安装防止扇脱落装置；关闭严密、开关灵活；滑撑铰链安装牢固、紧固螺钉不锈钢材质','观察＋手扳'),
+    it('J_F5','塑料门窗配件','平开窗扇高度＞900mm时锁闭点≥2个；开关力：平开（滑撑）≤80N且≥30N、推拉≤100N','测力计＋尺量'),
+    it('J_F6','塑料门窗密封','关闭时密封条处于压缩状态；密封条连续完整、均匀牢固、无脱槽收缩虚压；接口严密且位于窗上方；框与墙体缝隙填嵌饱满并用密封胶密封','观察'),
+    it('J_F7','塑料门窗偏差','外形尺寸差：≤1.5m为2mm、＞1.5m为3mm；对角线差：≤2m为3mm、＞2m为5mm；正侧面垂直度≤3mm、水平度≤3mm；平开相邻扇水平高度差≤2mm','钢卷尺＋垂直尺'),
+    it('J_F8','铝合金门窗安装','框和附框安装必须牢固；扇安装牢固、开关灵活、关闭严密、无倒翘；推拉扇安装防止扇脱落装置','手扳＋开闭',true),
+    it('J_F9','铝合金门窗表面','表面洁净平整光滑色泽一致，无锈蚀、擦伤、划痕和碰伤；漆膜或保护层连续；推拉扇开关力≤50N；框与墙体缝隙填嵌饱满并密封胶密封；扇密封胶条/毛条装配平整完好不脱槽','观察＋测力计'),
+    it('J_F10','铝合金门窗偏差','槽口宽高尺寸差：≤2m为2mm、＞2m为3mm；对角线差：≤2.5m为4mm、＞2.5m为5mm；框正侧面垂直度≤2mm、横框水平度≤2mm','钢卷尺＋垂直尺'),
+    it('J_F11','特种门','防火门、防盗门、全玻门等安装牢固、配件安装牢固、表面洁净无划痕碰伤','观察＋手扳'),
+    it('J_F12','门窗玻璃','裁割尺寸正确；安装牢固，无裂纹、损伤和松动','观察＋轻敲'),
+    it('J_F13','玻璃划痕','宽度＞0.5mm的划痕不应存在；≤0.5mm划痕每平米≤3条且每条长度≤50mm','距1.5m观察＋尺量'),
+    it('J_F14','玻璃密封','密封条与玻璃、槽口接触紧密平整；密封胶粘结牢固、接缝平齐；密封条无卷边脱槽、断口接缝粘结','观察'),
+    it('J_F15','玻璃表面','表面洁净，无腻子、密封胶、涂料污渍；中空玻璃内外表面洁净、中空层无灰尘和水蒸气；玻璃不与型材直接接触','观察'),
+    it('J_F16','安全玻璃','应设部位（面积＞1.5㎡、7层及以上外开窗、阳台栏板等）采用安全玻璃（3C标识）','观察',true),
+  ]},
+  {id:'j7', name:'七、建筑细部', items:[
+    it('J_G1','门窗套','安装牢固；表面平整洁净、线条顺直、接缝严密、色泽一致，无裂缝、翘曲及损坏；正侧面垂直度≤3mm、上口水平度≤1mm、上口直线度≤3mm','观察＋手扳＋尺量'),
+    it('J_G2','固定柜安装','安装牢固；配件齐全、安装牢固；抽屉和柜门开关灵活、回位正确','观察＋手扳＋开闭'),
+    it('J_G3','固定柜表面','表面平整洁净色泽一致，无裂缝、翘曲及损坏；裁口顺直、拼缝严密；外形尺寸≤3mm、立面垂直度≤2mm、门与框架平行度≤2mm','观察＋尺量'),
+    it('J_G4','护栏扶手','安装牢固；接缝严密、表面光滑色泽一致，无裂缝、翘曲及损坏；护栏垂直度≤3mm、栏杆间距0~-6mm、扶手直线度≤4mm、扶手高度+6~0mm','观察＋手扳＋尺量'),
+    it('J_G5','花饰','安装牢固；表面洁净、接缝严密吻合，无歪斜、裂缝、翘曲及损坏','观察＋手扳'),
+    it('J_G6','窗帘盒','安装牢固、配件牢固；表面平整洁净线条顺直、与墙面窗框衔接严密、密封胶缝顺直光滑；水平度≤2mm、上下口直线度≤3mm','观察＋手扳＋尺量'),
+    it('J_G7','窗台板','安装牢固；表面平整洁净线条顺直接缝严密色泽一致无裂缝翘曲损坏；与墙面窗框衔接严密；两端距洞口长度差≤2mm、出墙厚度差≤3mm','观察＋手扳＋尺量'),
+  ]},
+  {id:'j8', name:'八、建筑防水（主控）', items:[
+    it('J_H1','淋浴区防渗漏','墙面进行淋水检查、淋浴区地面蓄水不低于20mm，无渗漏','淋水＋蓄水试验',true),
+    it('J_H2','墙面及门窗周边','墙面及门窗周边无渗漏、无湿渍','观察',true),
+    it('J_H3','卫生间排水','地面排水顺畅、无积水','泼水试验'),
+  ]},
+  {id:'j9', name:'九、给水排水', items:[
+    it('J_I1','水压试验','试验压力=1.5倍工作压力且≥0.6MPa（设计未注明时）；金属及复合管10min压降≤0.02MPa、降到工作压力不渗不漏；塑料管稳压1h压降≤0.05MPa、1.15倍工作压力稳压2h压降≤0.03MPa（GB 50242-2002）','压力表＋计时',true),
+    it('J_I2','排水栓与地漏','平正、牢固，低于排水表面，周边无渗漏','试水观察'),
+    it('J_I3','满水通水试验','满水后各连接件不渗不漏；通水试验给、排水畅通','满水＋通水试验',true),
+    it('J_I4','浴缸检修口','有饰面的浴缸留有通向排水口的检修门','观察'),
+    it('J_I5','支托架','防腐良好、安装平整牢固、与器具接触紧密平稳','观察＋手扳'),
+    it('J_I6','给水配件','完好无损伤、接口严密、启闭部分灵活','观察＋手扳'),
+    it('J_I7','设备型号品牌','洁具、五金等设备型号、品牌按合同约定','观察核对'),
+  ]},
+  {id:'j10', name:'十、建筑电气', items:[
+    it('J_J1','配电箱功能','箱内断路器动作灵活可靠、启闭正常；漏电保护器试验无异常','观察＋操作试验',true),
+    it('J_J2','配电箱安装','回路标识清楚准确；安装牢固、部件齐全；暗装箱盖紧贴墙面、涂层完整','观察'),
+    it('J_J3','等电位联结','需做等电位联结的卫生间内金属部件设专用接线螺栓与等电位联结导体连接；连接处螺帽紧固、防松零件齐全（GB 50303-2015第25章）','观察＋手感',true),
+    it('J_J4','开关插座安装','面板紧贴饰面、四周无缝隙、安装牢固、表面光滑无碎裂划伤、装饰帽（板）齐全','观察'),
+    it('J_J5','开关动作','开关操作灵活、接触可靠、启闭正常','观察'),
+    it('J_J6','插座通电接线','插座通电和接线正常','插座检测仪',true),
+    it('J_J7','灯具','无机械损伤、变形、涂层剥落和灯罩破裂；灯具质量≤10kg固定牢固可靠；＞10kg按灯具重量5倍恒定均布荷载做强度试验、持续时间≥15min（查试验记录）','观察＋查记录'),
+  ]},
+  {id:'j11', name:'十一、供暖、通风、空调及设备', items:[
+    it('J_K1','散热器','防腐及面漆附着良好、色泽均匀，无脱落、起泡、流淌和漏涂；固定牢固、配件齐全、不渗漏水；试运行正常','观察＋试运行'),
+    it('J_K2','辐射供暖（地暖）','分水器、集水器安装牢固；功能正常','观察＋试运行'),
+    it('J_K3','空调排水管','室内机排水管连接紧密、无渗漏、无倒坡、无堵塞','试水观察'),
+    it('J_K4','空调制冷','制冷内机不漏水、制冷正常','通电检查'),
+    it('J_K5','空调安装','室内外机及附件安装位置正确、固定牢固、排列整齐','观察'),
+    it('J_K6','通风风口','风口与风管连接严密牢固、风口与装饰面紧贴、表面平整不变形、叶片调节灵活可靠','观察'),
+    it('J_K7','空调通风功能','试运行正常','试运行'),
+    it('J_K8','燃气热水器安装','外观无损伤；整机水平、安装牢固','观察'),
+    it('J_K9','热水器排烟管','排烟管安装中间部分不下垂、连接处严密包裹保证不漏烟气','观察',true),
+    it('J_K10','灶具','安装牢固、接缝严密；燃气灶连接气源处必须设有可关闭气路的阀门','观察',true),
+    it('J_K11','设备型号品牌','热水器、灶具、空调、烟机等设备型号、品牌按合同约定','观察核对'),
+    it('J_K12','排油烟机','外观无损伤；安装水平、无晃动；通电后正常工作、无漏烟现象','观察＋通电'),
+  ]},
+  {id:'j12', name:'十二、建筑智能化', items:[
+    it('J_L1','智能灯光控制','墙控面板具备全开、全关、场景控制功能；各路灯对应面板开关标识清晰','观察＋操作'),
+    it('J_L2','智能总控','总控面板宜包括墙控面板、移动终端面板（PAD）等多种控制方式','观察'),
+    it('J_L3','无线覆盖','采用无线通信系统的智能家居，对全户型各个角落无线通信效果进行测试评估','测试'),
+    it('J_L4','面板安装位置','同一墙面装有可视对讲系统的，智能家居控制面板底线与可视对讲底线持平','观察'),
+    it('J_L5','访客对讲','开锁机构灵活有效；双向通话声音清晰无明显噪声；可视对讲图像清晰稳定；室内分机安装牢固','观察＋操作'),
+    it('J_L6','紧急呼叫按钮','按下紧急呼叫按钮，物服中心能接收到报警信号及报警房间号','观察＋测试'),
+  ]},
+  {id:'j13', name:'十三、室内环境专项（可选）', items:[
+    it('J_M1','甲醛','≤0.08mg/m³（GB 50325-2020，Ⅰ类民用建筑）','检测仪'),
+    it('J_M2','TVOC','≤0.45mg/m³','检测仪'),
+    it('J_M3','苯','≤0.06mg/m³','检测仪'),
+    it('J_M4','室内噪声','卧室昼间≤45dB(A)','噪声计'),
+  ]},
+];
+
+const SECTIONS = {maopei:MAOPEI, jingzhuang:JINGZHUANG};
+const LEVELS = {1:'严重',2:'一般',3:'轻微'};
+const KEY = 'yf-report-v1';
+
+/* ================= 状态 ================= */
+let state = loadState();
+let curMode = state.info.type === 'jingzhuang' ? 'jingzhuang' : 'maopei';
+let warnedQuota = false;
+
+function blankState(){
+  const d = new Date();
+  const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return {
+    v:1, mode:'maopei',
+    info:{no:'YF-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-01', community:'', building:'', room:'', area:'', inner:'', struct:'框架结构', owner:'', phone:'', client:'', org:'', inspector:'', date:ds, weather:'', tools:'空鼓锤、2m靠尺、楔形塞尺、1m垂直检测尺、200mm直角检测尺、水平尺、激光测距仪、钢卷尺（5m）、钢直尺、游标卡尺、坡度尺、插座检测仪（相位仪）、验电器、测力计、压力表、水桶（蓄水试验）、通球'},
+    expanded:{},
+    results:{},
+    rooms:[
+      {name:'客厅',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'餐厅',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'主卧',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'次卧',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'厨房',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'主卫',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'次卫',h:['','','','',''],k:'',j:'',d:'',note:''},
+      {name:'阳台',h:['','','','',''],k:'',j:'',d:'',note:''},
+    ],
+  };
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const s = JSON.parse(raw); if(s && s.v === 1){ if(!s.expanded) s.expanded = {}; return s; } }
+  }catch(e){}
+  return blankState();
+}
+
+/* ================= 工具函数 ================= */
+const $ = id => document.getElementById(id);
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmt(v){ return v == null || v === '' ? '—' : esc(v); }
+
+function allItems(){
+  const out = [];
+  for(const sec of SECTIONS[curMode]) for(const i of sec.items) out.push(i);
+  return out;
+}
+function stats(){
+  let pass=0, fail=0, na=0, mainFail=0;
+  const fails=[];
+  for(const itm of allItems()){
+    const r = state.results[itm.id];
+    if(!r) continue;
+    if(r.s === 'pass') pass++;
+    else if(r.s === 'fail'){ fail++; fails.push({itm, r}); if(itm.main) mainFail++; }
+    else if(r.s === 'na') na++;
+  }
+  const rate = (pass+fail) ? Math.round(pass/(pass+fail)*1000)/10 : null;
+  return {total:pass+fail+na, pass, fail, na, mainFail, fails, rate};
+}
+function scheduleSave(){
+  clearTimeout(scheduleSave._t);
+  scheduleSave._t = setTimeout(saveNow, 400);
+}
+function saveNow(){
+  state.mode = curMode;
+  try{
+    localStorage.setItem(KEY, JSON.stringify(state));
+    $('saveTip').textContent = '已自动保存 ' + new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  }catch(e){
+    if(!warnedQuota){ warnedQuota = true; alert('数据（含照片）过大，浏览器自动保存失败。请及时点击「导出数据」备份！'); }
+    $('saveTip').textContent = '⚠ 自动保存失败';
+  }
+}
+
+/* ================= 基本信息绑定 ================= */
+const INFO_FIELDS = ['no','community','building','room','area','inner','struct','owner','phone','client','org','inspector','date','weather','tools'];
+function bindInfo(){
+  for(const k of INFO_FIELDS){
+    const el = $('f_'+k);
+    el.value = state.info[k] || '';
+    el.addEventListener('input', ()=>{ state.info[k] = el.value; scheduleSave(); });
+  }
+  $('f_date').addEventListener('change', ()=>{ state.info.date = $('f_date').value; scheduleSave(); });
+}
+
+/* ================= 清单渲染 ================= */
+function renderChecklist(){
+  const wrap = $('checklist');
+  wrap.innerHTML = '';
+  const st = stats();
+  for(const sec of SECTIONS[curMode]){
+    let sp=0, sf=0;
+    for(const i of sec.items){ const r = state.results[i.id]; if(r && r.s==='pass') sp++; if(r && r.s==='fail') sf++; }
+    const el = document.createElement('div');
+    el.className = 'sec';
+    el.innerHTML =
+      '<div class="sh" data-sec="'+sec.id+'">' +
+        '<span class="t">'+esc(sec.name)+'</span>' +
+        (sp?'<span class="badge b-pass">合格 '+sp+'</span>':'') +
+        (sf?'<span class="badge b-fail">问题 '+sf+'</span>':'') +
+        '<span class="cnt">'+sec.items.length+' 项</span>' +
+        '<span class="ops">' +
+          '<button data-op="allpass">全部合格</button>' +
+          '<button data-op="allna">整节不适用</button>' +
+        '</span>' +
+      '</div><div class="sc" style="display:' + (state.expanded[sec.id] ? '' : 'none') + '"></div>';
+    wrap.appendChild(el);
+    const body = el.querySelector('.sc');
+    for(const i of sec.items){
+      body.appendChild(renderItem(i));
+    }
+    const sh = el.querySelector('.sh');
+    sh.addEventListener('click', e=>{
+      if(e.target.closest('.ops')) return;
+      const open = body.style.display === 'none';
+      body.style.display = open ? '' : 'none';
+      state.expanded[sec.id] = open;
+    });
+    sh.querySelector('[data-op=allpass]').addEventListener('click', ()=>{
+      for(const i of sec.items){ const r = state.results[i.id] || (state.results[i.id]={s:null}); r.s='pass'; r.issue=null; }
+      scheduleSave(); renderChecklist();
+    });
+    sh.querySelector('[data-op=allna]').addEventListener('click', ()=>{
+      for(const i of sec.items){ state.results[i.id] = {s:'na'}; }
+      scheduleSave(); renderChecklist();
+    });
+  }
+  updateStats();
+}
+function renderItem(i){
+  const r = state.results[i.id] || {s:null};
+  const el = document.createElement('div');
+  el.className = 'itm';
+  let html =
+    '<div class="nm"><div class="n">'+esc(i.name)+(i.main?'<span class="tag-main">主控</span>':'')+'</div>' +
+    '<div class="s">标准：'+esc(i.std)+'</div>' +
+    '<span class="m">'+esc(i.method)+'</span></div>' +
+    '<div class="rbtns">' +
+      '<button data-s="pass" class="'+(r.s==='pass'?'on-pass':'')+'">合格</button>' +
+      '<button data-s="fail" class="'+(r.s==='fail'?'on-fail':'')+'">问题</button>' +
+      '<button data-s="na" class="'+(r.s==='na'?'on-na':'')+'">不适用</button>' +
+    '</div>';
+  el.innerHTML = html;
+  el.querySelectorAll('.rbtns button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const cur = state.results[i.id] || (state.results[i.id]={s:null});
+      cur.s = btn.dataset.s;
+      if(btn.dataset.s === 'pass' || btn.dataset.s === 'na') cur.issue = null;
+      if(btn.dataset.s === 'fail' && !cur.issue){
+        cur.issue = {loc:'', desc:'', level:'2', sugg:'', photoNo:'', photos:[]};
+      }
+      scheduleSave(); renderChecklist();
+    });
+  });
+  if(r.s === 'fail'){
+    const issue = r.issue || (r.issue = {loc:'', desc:'', level:'2', sugg:'', photoNo:'', photos:[]});
+    const box = document.createElement('div');
+    box.className = 'issue';
+    box.innerHTML =
+      '<div class="ig">' +
+        '<div><label>问题位置 *</label><input data-k="loc" placeholder="如：主卧东墙中部"></div>' +
+        '<div><label>问题等级</label><select data-k="level">' +
+          '<option value="1">严重（影响安全/使用功能）</option>' +
+          '<option value="2">一般</option>' +
+          '<option value="3">轻微（观感瑕疵）</option>' +
+        '</select></div>' +
+        '<div><label>照片编号（可选）</label><input data-k="photoNo" placeholder="如：IMG_001~003"></div>' +
+      '</div>' +
+      '<div style="margin-top:8px"><label>问题描述 *</label><textarea data-k="desc" rows="2" placeholder="如：墙面局部空鼓约0.3㎡，位于主卧东墙距地1.2m处"></textarea></div>' +
+      '<div style="margin-top:8px"><label>整改建议（可选）</label><input data-k="sugg" placeholder="如：凿除空鼓部位后重新抹灰"></div>' +
+      '<div class="photos" data-photos></div>' +
+      '<div class="photos"><div class="add" data-addph>＋</div><input type="file" accept="image/*" multiple style="display:none" data-file></div>' +
+      '<div class="hint">可添加现场照片（自动压缩后随报告打印）</div>';
+    el.appendChild(box);
+    const set = k => v => { issue[k] = v; scheduleSave(); };
+    box.querySelector('[data-k=loc]').value = issue.loc || '';
+    box.querySelector('[data-k=loc]').addEventListener('input', e=>set('loc')(e.target.value));
+    box.querySelector('[data-k=desc]').value = issue.desc || '';
+    box.querySelector('[data-k=desc]').addEventListener('input', e=>set('desc')(e.target.value));
+    box.querySelector('[data-k=sugg]').value = issue.sugg || '';
+    box.querySelector('[data-k=sugg]').addEventListener('input', e=>set('sugg')(e.target.value));
+    box.querySelector('[data-k=photoNo]').value = issue.photoNo || '';
+    box.querySelector('[data-k=photoNo]').addEventListener('input', e=>set('photoNo')(e.target.value));
+    const lv = box.querySelector('[data-k=level]');
+    lv.value = issue.level || '2';
+    lv.addEventListener('change', e=>set('level')(e.target.value));
+    const phWrap = box.querySelector('[data-photos]');
+    const renderPhotos = ()=>{
+      phWrap.innerHTML = '';
+      (issue.photos||[]).forEach((p,idx)=>{
+        const d = document.createElement('div'); d.className = 'ph';
+        d.innerHTML = '<img src="'+p+'"><span class="x" title="删除">✕</span>';
+        d.querySelector('.x').addEventListener('click', ()=>{ issue.photos.splice(idx,1); scheduleSave(); renderItem(i); });
+        phWrap.appendChild(d);
+      });
+    };
+    renderPhotos();
+    box.querySelector('[data-addph]').addEventListener('click', ()=>box.querySelector('[data-file]').click());
+    box.querySelector('[data-file]').addEventListener('change', async e=>{
+      const files = Array.from(e.target.files || []);
+      for(const f of files){
+        try{
+          const data = await compressImage(f);
+          issue.photos.push(data);
+        }catch(err){ alert('图片读取失败：'+f.name); }
+      }
+      scheduleSave(); renderItem(i);
+    });
+  }
+  return el;
+}
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      const MAX = 1200;
+      const scale = Math.min(1, MAX/Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width*scale));
+      c.height = Math.max(1, Math.round(img.height*scale));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('load fail')); };
+    img.src = url;
+  });
+}
+
+/* ================= 空间尺寸实测 ================= */
+function renderRooms(){
+  const tb = $('roomBody');
+  tb.innerHTML = '';
+  state.rooms.forEach((room, ri)=>{
+    const tr = document.createElement('tr');
+    let cells = '<td><input data-k="name" value="'+esc(room.name)+'"></td>';
+    for(let k=0;k<5;k++){
+      cells += '<td><input data-k="h'+k+'" inputmode="numeric" value="'+esc(room.h[k])+'" placeholder="—"></td>';
+    }
+    const vals = room.h.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+    const diff = vals.length>=2 ? Math.round((Math.max(...vals)-Math.min(...vals))*10)/10 : '';
+    cells += '<td style="font-weight:700;color:'+(diff!==''&&diff>20?'var(--c-fail)':'var(--c-pass)')+'">'+diff+'</td>';
+    cells += '<td><input data-k="k" inputmode="numeric" value="'+esc(room.k)+'"></td>';
+    cells += '<td><input data-k="j" inputmode="numeric" value="'+esc(room.j)+'"></td>';
+    cells += '<td><input data-k="d" inputmode="numeric" value="'+esc(room.d)+'"></td>';
+    cells += '<td class="rm" title="删除该房间">✕</td>';
+    tr.innerHTML = cells;
+    tr.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const k = inp.dataset.k;
+        if(k === 'name') room.name = inp.value;
+        else if(k.startsWith('h')) room.h[+k.slice(1)] = inp.value;
+        else room[k] = inp.value;
+        scheduleSave(); renderRooms();
+      });
+    });
+    tr.querySelector('.rm').addEventListener('click', ()=>{ state.rooms.splice(ri,1); scheduleSave(); renderRooms(); });
+    tb.appendChild(tr);
+  });
+}
+function addRoom(){
+  state.rooms.push({name:'房间'+(state.rooms.length+1), h:['','','','',''], k:'', j:'', d:'', note:''});
+  scheduleSave(); renderRooms();
+}
+
+/* ================= 统计条 ================= */
+function updateStats(){
+  const st = stats();
+  $('stTotal').textContent = st.total;
+  $('stPass').textContent = st.pass;
+  $('stFail').textContent = st.fail;
+  $('stNa').textContent = st.na;
+  $('stRate').textContent = st.rate == null ? '—' : st.rate + '%';
+  $('stRate').style.color = st.rate == null ? '' : (st.rate >= 90 ? 'var(--c-pass)' : 'var(--c-fail)');
+}
+
+/* ================= 报告生成 ================= */
+function verdictText(st){
+  const mainFails = st.fails.filter(f=>f.itm.main);
+  if(mainFails.length > 0){
+    return '本户验收<span style="color:#dc2626;font-weight:700">未通过</span>。存在 '+mainFails.length+' 项主控项目（安全及使用功能）问题：' +
+      mainFails.map(f=>f.itm.name).join('、') + '，须由建设单位（开发商）整改完毕后申请复验。';
+  }
+  if(st.rate == null) return '本次验收未记录有效检查项，无法判定。';
+  if(st.rate >= 90){
+    return '本户验收<span style="color:#16a34a;font-weight:700">通过</span>。共检查 '+st.total+' 项，其中合格 '+st.pass+' 项、不适用 '+st.na+' 项，一般项目合格点率 '+st.rate+'%，符合要求。';
+  }
+  return '本户验收<span style="color:#b45309;font-weight:700">有条件通过</span>。一般项目合格点率 '+st.rate+'%，低于 90% 的判定要求，所列问题项须由建设单位（开发商）整改完毕后复验。';
+}
+
+function reportTitle(){
+  const p = [];
+  if(state.info.community) p.push(state.info.community);
+  if(state.info.building) p.push(state.info.building);
+  return p.length ? p.join(' ') : '住宅验房报告';
+}
+
+function openReport(){
+  const st = stats();
+  const info = state.info;
+  const fails = st.fails;
+  // 打印/另存为PDF时，默认文件名 = 小区名称 + 楼栋号
+  document.title = reportTitle();
+
+  // 问题编号
+  const issues = fails.map((f,idx)=>({
+    no:'W'+(idx+1), itm:f.itm, r:f.r, issue:f.r.issue||{},
+  }));
+
+  // 分项验收记录表
+  let secHtml = '';
+  for(const sec of SECTIONS[curMode]){
+    const rows = [];
+    sec.items.forEach((i,idx)=>{
+      const r = state.results[i.id];
+      if(!r) return;
+      const isF = r.s === 'fail';
+      const w = isF ? issues.find(x=>x.itm.id===i.id) : null;
+      rows.push('<tr class="'+(isF?'fail':'pass')+'">' +
+        '<td class="c">'+rows.length+1+'</td>' +
+        '<td>'+esc(i.name)+(i.main?'（主控）':'')+'</td>' +
+        '<td>'+esc(i.std)+'</td>' +
+        '<td class="c">'+esc(i.method)+'</td>' +
+        '<td class="c res">'+(isF ? '不合格 '+esc(w?w.no:'') : (r.s==='pass'?'合格':'不适用'))+'</td>' +
+      '</tr>');
+    });
+    if(!rows.length) continue;
+    secHtml += '<h4>'+esc(sec.name)+'</h4><table><thead><tr>' +
+      '<th style="width:5%">序号</th><th style="width:17%">检查项目</th><th>验收标准</th><th style="width:12%">检查方法</th><th style="width:9%">结果</th>' +
+      '</tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+  }
+
+  // 问题汇总表
+  let issueHtml = issues.map(x=>{
+    const iss = x.issue;
+    return '<tr class="fail"><td class="c">'+x.no+'</td>' +
+      '<td>'+esc(x.itm.name)+'</td>' +
+      '<td>'+fmt(iss.loc)+'</td>' +
+      '<td>'+fmt(iss.desc)+'</td>' +
+      '<td class="c"><span class="lv lv-'+(iss.level||'2')+'">'+(LEVELS[iss.level]||'一般')+'</span></td>' +
+      '<td>'+fmt(iss.sugg)+'</td>' +
+      '<td class="c">'+fmt(iss.photoNo)+'</td></tr>';
+  }).join('');
+
+  // 实测数据表
+  let roomHtml = '';
+  state.rooms.forEach(r=>{
+    const vals = r.h.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+    const diff = vals.length>=2 ? Math.max(...vals)-Math.min(...vals) : NaN;
+    const low = Math.min(...vals, Infinity);
+    const isLiving = /卧|厅|起居/.test(r.name);
+    const warn = (isLiving && isFinite(low) && low < 2400) ? '，净高低于2.40m须书面告知业主' : '';
+    const ok = (vals.length>=2) ? (diff<=20 ? '合格' : '超差') : '—';
+    roomHtml += '<tr><td class="c">'+esc(r.name)+'</td>' +
+      '<td class="c">'+r.h.map(v=>fmt(v===''?null:v)).join('</td><td class="c">')+'</td>' +
+      '<td class="c">'+(isFinite(diff)?Math.round(diff*10)/10:'—')+'</td>' +
+      '<td class="c">'+(ok==='合格'?'<span style="color:#16a34a">合格</span>':(ok==='超差'?'<span style="color:#dc2626">超差</span>':'—'))+warn+'</td>' +
+      '<td class="c">'+fmt(r.k)+'</td>' +
+      '<td class="c">'+fmt(r.j)+'</td>' +
+      '<td class="c">'+fmt(r.d)+'</td>' +
+      '<td>'+fmt(r.note)+'</td></tr>';
+  });
+
+  // 照片
+  let photoHtml = '';
+  let photoIdx = 0;
+  const allPhotos = [];
+  issues.forEach(x=>{
+    (x.issue.photos||[]).forEach(p=>{
+      photoIdx++;
+      allPhotos.push({no:photoIdx, data:p, label:(x.no+' '+x.itm.name+' · '+fmt(x.issue.loc))});
+    });
+  });
+  if(allPhotos.length){
+    photoHtml = '<h3 class="pb">附：现场问题照片</h3><div class="photos-grid">' +
+      allPhotos.map(p=>'<figure><img src="'+p.data+'"><figcaption>图'+p.no+'　'+p.label+'</figcaption></figure>').join('') +
+      '</div>';
+  }
+
+  const today = new Date().toLocaleDateString('zh-CN');
+  const verdictHtml = verdictText(st);
+
+  $('report').innerHTML =
+  '<div class="rp">' +
+    '<div class="cover">' +
+      '<h1>住宅验房报告</h1>' +
+      '<h2>（成都市标准版）</h2>' +
+      '<div class="cover-meta">' +
+        '<div>报告编号：<b>'+fmt(info.no)+'</b></div>' +
+        '<div>验房日期：<b>'+fmt(info.date)+'</b></div>' +
+        '<div>小区名称：<b>'+fmt(info.community)+'</b></div>' +
+        '<div>楼栋／房号：<b>'+fmt(info.building)+' '+fmt(info.room)+'</b></div>' +
+        '<div>房屋类型：<b>'+(curMode==='maopei'?'毛坯房（清水房）':'精装房（成品住宅）')+'</b></div>' +
+        '<div>验房机构：<b>'+fmt(info.org)+'</b></div>' +
+        '<div>验房师：<b>'+fmt(info.inspector)+'</b></div>' +
+        '<div>报告出具日期：<b>'+today+'</b></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<h3>一、房屋基本信息</h3>' +
+    '<table class="kv">' +
+      '<tr><td>小区名称</td><td>'+fmt(info.community)+'</td><td>楼栋号</td><td>'+fmt(info.building)+'</td></tr>' +
+      '<tr><td>单元／房号</td><td>'+fmt(info.room)+'</td><td>房屋类型</td><td>'+(curMode==='maopei'?'毛坯房（清水房）':'精装房（成品住宅）')+'</td></tr>' +
+      '<tr><td>建筑面积</td><td>'+fmt(info.area)+' ㎡</td><td>套内面积</td><td>'+fmt(info.inner)+' ㎡</td></tr>' +
+      '<tr><td>结构类型</td><td>'+fmt(info.struct)+'</td><td>验房天气</td><td>'+fmt(info.weather)+'</td></tr>' +
+      '<tr><td>业主姓名</td><td>'+fmt(info.owner)+'</td><td>联系电话</td><td>'+fmt(info.phone)+'</td></tr>' +
+      '<tr><td>委托单位</td><td>'+fmt(info.client)+'</td><td>验房机构</td><td>'+fmt(info.org)+'</td></tr>' +
+      '<tr><td>验房师</td><td>'+fmt(info.inspector)+'</td><td>验房日期</td><td>'+fmt(info.date)+'</td></tr>' +
+    '</table>' +
+
+    '<h3>二、验收依据</h3>' +
+    '<table><tbody>' +
+      '<tr><td class="c">1</td><td>《四川省住宅工程质量分户验收管理规定》（川建行规〔2024〕6号）</td></tr>' +
+      '<tr><td class="c">2</td><td>《成都市住宅工程质量分户验收指南（2022版）》（成都市住建局）</td></tr>' +
+      '<tr><td class="c">3</td><td>《成都市成品住宅装修交付验收技术指引》（成都市住建局，2026年8月）</td></tr>' +
+      '<tr><td class="c">4</td><td>《住宅项目规范》GB 55038-2025、《住宅设计规范》GB 50096-2011</td></tr>' +
+      '<tr><td class="c">5</td><td>《建筑装饰装修工程质量验收标准》GB 50210-2018、《建筑地面工程施工质量验收规范》GB 50209-2010</td></tr>' +
+      '<tr><td class="c">6</td><td>《建筑给水排水及采暖工程施工质量验收规范》GB 50242-2002、《通风与空调工程施工质量验收规范》GB 50243-2016</td></tr>' +
+      '<tr><td class="c">7</td><td>《建筑电气工程施工质量验收规范》GB 50303-2015、《建筑工程施工质量验收统一标准》GB 50300-2013</td></tr>' +
+      '<tr><td class="c">8</td><td>《民用建筑工程室内环境污染控制标准》GB 50325-2020</td></tr>' +
+      '<tr><td class="c">9</td><td>《四川省成品住宅装修工程技术标准》DBJ51/015-2021、《住宅装饰装修工程施工规范》GB 50327-2001</td></tr>' +
+      '<tr><td class="c">10</td><td>经审查合格的施工图设计文件、商品房买卖合同及补充协议约定</td></tr>' +
+    '</tbody></table>' +
+
+    '<h3>三、检测工具</h3>' +
+    '<p>'+fmt(info.tools)+'</p>' +
+
+    '<h3>四、分项验收记录</h3>' +
+    (secHtml || '<p style="color:#999">（尚未记录任何检查项）</p>') +
+
+    '<h3 class="pb">五、问题汇总表</h3>' +
+    (issues.length ?
+      '<table><thead><tr>' +
+      '<th style="width:6%">编号</th><th style="width:13%">所属分项</th><th style="width:12%">位置</th><th>问题描述</th><th style="width:7%">等级</th><th style="width:16%">整改建议</th><th style="width:9%">照片编号</th>' +
+      '</tr></thead><tbody>'+issueHtml+'</tbody></table>'
+      : '<p style="color:#16a34a">本次验收未发现问题项。</p>') +
+
+    '<h3>六、空间尺寸实测记录</h3>' +
+    '<table><thead><tr>' +
+      '<th rowspan="2">房间</th><th colspan="5">净高实测值（mm）</th><th rowspan="2">净高极差<br>（≤20mm）</th><th rowspan="2">判定</th><th rowspan="2">净开间<br>（mm）</th><th rowspan="2">净进深<br>（mm）</th><th rowspan="2">对角线差<br>（mm）</th><th rowspan="2">备注</th>' +
+      '</tr><tr><th>点1</th><th>点2</th><th>点3</th><th>点4</th><th>点5</th></tr>' +
+      '</thead><tbody>'+roomHtml+'</tbody></table>' +
+
+    '<h3>七、验收统计与结论</h3>' +
+    '<table class="kv">' +
+      '<tr><td>检查项总数</td><td>'+st.total+' 项</td><td>合格项数</td><td>'+st.pass+' 项</td></tr>' +
+      '<tr><td>不合格项数</td><td>'+st.fail+' 项</td><td>不适用项数</td><td>'+st.na+' 项</td></tr>' +
+      '<tr><td>一般项目合格点率</td><td colspan="3">'+(st.rate==null?'—':st.rate+'%')+'（判定要求：≥90%）</td></tr>' +
+    '</table>' +
+    '<p style="font-size:11pt"><b>验收结论：</b>'+verdictHtml+'</p>' +
+    '<p style="font-size:9pt;color:#444">判定依据：《四川省住宅工程质量分户验收管理规定》（川建行规〔2024〕6号）第九条——分户验收主控项目检查全部合格且一般项目检查合格点率达到90%以上的，判定为验收合格。本报告为第三方（业主委托）查验记录，可作为与建设单位（开发商）交涉、要求整改的依据，涉及结构安全疑义时建议委托具有相应资质的检测鉴定机构复核。</p>' +
+
+    '<div class="sig">' +
+      '<div>验房师（签字）：<br><br><br>　　　　　　　　</div>' +
+      '<div>业主（签字）：<br><br><br>　　　　　　　　</div>' +
+      '<div>日期：　　　　年　　月　　日<br><br><br>　　　　　　　　</div>' +
+    '</div>' +
+    '<div class="foot">报告编号：'+fmt(info.no)+'　|　'+fmt(info.community)+' '+fmt(info.building)+' '+fmt(info.room)+'　|　生成时间：'+today+'　|　本报告由「成都市住宅验房报告生成器」生成，检查标准依据成都及四川省现行分户验收规定与国家标准</div>' +
+
+    photoHtml +
+  '</div>';
+
+  document.body.classList.add('printing');
+  window.scrollTo(0,0);
+  const bar = document.createElement('div');
+  bar.id = 'printBar';
+  bar.className = 'no-print';
+  bar.style.cssText = 'position:fixed;top:12px;right:12px;z-index:99;display:flex;gap:8px';
+  bar.innerHTML = '<button class="btn btn-primary" onclick="window.print()">🖨 打印 / 另存为PDF</button>' +
+                  '<button class="btn btn-ghost" onclick="closeReport()">← 返回编辑</button>';
+  document.body.appendChild(bar);
+}
+function closeReport(){
+  document.body.classList.remove('printing');
+  const bar = document.getElementById('printBar');
+  if(bar) bar.remove();
+  window.scrollTo(0,0);
+  document.title = '成都市住宅验房报告生成器';
+}
+
+/* ================= 导入导出 ================= */
+function exportData(){
+  state.mode = curMode;
+  const blob = new Blob([JSON.stringify(state,null,1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '验房数据-'+((state.info.community||'')+(state.info.room||''))+'-.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importData(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const s = JSON.parse(rd.result);
+      if(!s || s.v !== 1) throw new Error('版本不符');
+      state = s;
+      curMode = state.info.type === 'jingzhuang' ? 'jingzhuang' : state.mode === 'jingzhuang' ? 'jingzhuang' : 'maopei';
+      refreshAll();
+      alert('导入成功');
+    }catch(e){ alert('导入失败：文件格式不正确'); }
+    input.value = '';
+  };
+  rd.readAsText(f);
+}
+function resetAll(){
+  if(!confirm('确定要清空全部数据并重置吗？此操作不可恢复。')) return;
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  state = blankState();
+  curMode = 'maopei';
+  refreshAll();
+}
+
+/* ================= 初始化 ================= */
+function refreshAll(){
+  for(const k of INFO_FIELDS){ $('f_'+k).value = state.info[k] || ''; }
+  document.querySelectorAll('#modeTabs button').forEach(b=>{
+    b.classList.toggle('on', b.dataset.mode === curMode);
+  });
+  renderChecklist();
+  renderRooms();
+  updateStats();
+}
+document.querySelectorAll('#modeTabs button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    curMode = b.dataset.mode;
+    state.info.type = curMode;
+    document.querySelectorAll('#modeTabs button').forEach(x=>x.classList.toggle('on', x===b));
+    scheduleSave();
+    renderChecklist();
+  });
+});
+bindInfo();
+refreshAll();
+
+/* ================= PWA：Service Worker 与安装提示（仅线上环境生效） ================= */
+if(location.protocol === 'https:' || location.protocol === 'http:'){
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+  const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile && !isStandalone){
+    try{
+      if(!localStorage.getItem('yf-install-hint-closed')){
+        setTimeout(()=>{
+          const tip = document.createElement('div');
+          tip.className = 'no-print';
+          tip.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#1d4ed8;color:#fff;padding:12px 14px;font-size:13px;z-index:60;display:flex;gap:10px;align-items:center;box-shadow:0 -2px 12px rgba(0,0,0,.2)';
+          tip.innerHTML = '<span style="flex:1">💡 点击浏览器菜单（右上角 ⋮ 或 分享按钮）→「添加到主屏幕」，即可像 APP 一样使用</span><span style="cursor:pointer;font-weight:700;padding:4px 8px" id="yf-hint-close">✕</span>';
+          document.body.appendChild(tip);
+          document.getElementById('yf-hint-close').addEventListener('click', ()=>{
+            tip.remove();
+            try{ localStorage.setItem('yf-install-hint-closed','1'); }catch(e){}
+          });
+        }, 2000);
+      }
+    }catch(e){}
+  }
+}
+</script>
+</body>
+</html>

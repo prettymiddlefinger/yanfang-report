@@ -1,0 +1,17 @@
+{
+  "name": "验房报告生成器",
+  "short_name": "验房报告",
+  "description": "成都市标准住宅验房报告生成工具，依据川建行规〔2024〕6号等标准，支持毛坯房/精装房验收报告一键生成",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6f8",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
